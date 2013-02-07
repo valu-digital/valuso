@@ -1,0 +1,4 @@
+eclipse.preferences.version=1
+include_path=5;com.zend.php.phpunit.CONTAINER\u00050;/ValuSo\u00052;/ValuCore\u00052;/Zend Framework
+phpVersion=php5.4
+use_asp_tags_as_php=false
