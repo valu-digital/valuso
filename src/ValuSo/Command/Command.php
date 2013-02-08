@@ -67,24 +67,28 @@ class Command
     /**
      * Initialize a new command
      *
-     * @param string $context
      * @param string $service
      * @param string $operation
      * @param mixed $params
+     * @param string $context
      * @return \ValuSo\Command\CommandInterface
      */
-    public function __construct($context, $service, $operation, $params = null)
+    public function __construct($service = null, $operation = null, $params = null, $context = null)
     {
-        if ($params === null) {
-            $params = new ArrayObject();
+        if ($service !== null) {
+            $this->setService($service);
         }
         
-        $this->setContext($context);
-        $this->setService($service);
-        $this->setOperation($operation);
+        if ($operation !== null) {
+            $this->setOperation($operation);
+        }
         
         if ($params !== null) {
             $this->setParams($params);
+        }
+        
+        if ($context !== null) {
+            $this->setContext($context);
         }
     }
     
@@ -175,7 +179,7 @@ class Command
 	/**
      * @see CommandInterface::setResponses()
      */
-    public function setResponses($responses)
+    public function setResponses(ResponseCollection $responses)
     {
         $this->responses = $responses;
         return $this;
