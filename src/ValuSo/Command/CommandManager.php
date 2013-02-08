@@ -5,7 +5,6 @@ use ValuSo\Exception;
 use Zend\EventManager\EventManager;
 use Zend\EventManager\ResponseCollection;
 use Zend\EventManager\EventInterface;
-use Valu\Service\Exception;
 
 /**
  * Command manager is responsible of maintaining list of subscribed
@@ -19,17 +18,23 @@ use Valu\Service\Exception;
  */
 class CommandManager extends EventManager
 {
+    
+    protected $eventClass = 'ValuSo\Command\Command';
+    
     /**
      * Triggers listeners for specific command
      * 
      * @see \Zend\EventManager\EventManager::triggerListeners()
      */
-    protected function triggerListeners($command, CommandInterface $c, $callback = null)
+    protected function triggerListeners($event, EventInterface $e, $callback = null)
     {
+        $command = $event;
+        $c = $e;
+        
         $responses = new ResponseCollection();
         $listeners = $this->getListeners($command);
         
-        $command->setResponses($responses);
+        $c->setResponses($responses);
         
         if ($listeners->isEmpty()) {
             return $responses;
@@ -40,7 +45,7 @@ class CommandManager extends EventManager
         foreach ($listeners as $listener) {
             
             try{
-                $response  = call_user_func($listener->getCallback(), $command);
+                $response  = call_user_func($listener->getCallback(), $c);
                 $exception = null;
             } catch(Exception\SkippableException $ex) {
                 
