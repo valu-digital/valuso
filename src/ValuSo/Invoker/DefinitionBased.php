@@ -1,12 +1,12 @@
 <?php
 namespace ValuSo\Invoker;
 
+use ValuSo\Command\CommandInterface;
 use Valu\Service\ServiceEvent;
 use Valu\Service\ServiceInterface;
-use Valu\Service\Exception;
-use Valu\Service\Definition;
-use Valu\Service\Invoker\InvokerInterface;
-use Valu\Service\Feature\DefinitionProviderInterface;
+use ValuSo\Exception;
+use ValuSo\Definition;
+use ValuSo\Feature\DefinitionProviderInterface;
 use Zend\Cache\Storage\StorageInterface;
 use Zend\Stdlib\ArrayUtils;
 
@@ -30,28 +30,28 @@ class DefinitionBased implements InvokerInterface
     /**
      * Invoke a method
      *
-     * @param $service ServiceInterface           
-     * @param $e ServiceEvent           
+     * @param $service           
+     * @param CommandInterface $c           
      * @throws \InvalidArgumentException
      * @throws Exception\OperationNotFoundException
      * @throws Exception\UnsupportedContextException
      * @return mixed
      */
-    public function invoke(ServiceInterface $service, ServiceEvent $e)
+    public function invoke($service, CommandInterface $c)
     {
         
         if (! $service instanceof DefinitionProviderInterface) {
-            throw new \InvalidArgumentException(
-                    'Service must implement DefinitionProviderInterface');
+            throw new Exception\InvalidArgumentException(
+                'Service must implement DefinitionProviderInterface');
         }
         
         $definition = $this->defineService($service);
-        $operation = $e->getOperation();
+        $operation = $c->getOperation();
         
         if (! $definition->hasOperation($operation)) {
             throw new Exception\OperationNotFoundException(
-                    'Service ' . get_class($service) .
-                             " doesn't provide operation " . $operation);
+                'Service ' . get_class($service) .
+                         " doesn't provide operation " . $operation);
         }
         
         $operationDef = $definition->defineOperation($operation);
@@ -62,15 +62,15 @@ class DefinitionBased implements InvokerInterface
         if (isset($operationDef['meta']['contexts'])) {
             $contexts = preg_split('# +#', $operationDef['meta']['contexts']);
             
-            if (! in_array($e->getContext(), $contexts)) {
+            if (! in_array($c->getContext(), $contexts)) {
                 throw new Exception\UnsupportedContextException(
                     sprintf(
                         "Operation %s is not supported in %s service context",
-                        $operation, $e->getContext()));
+                        $operation, $c->getContext()));
             }
         }
         
-        $params = $this->resolveParams($definition, $operation, $e->getParams());
+        $params = $this->resolveParams($definition, $operation, $c->getParams());
         
         switch (count($params)) {
             case 0:
