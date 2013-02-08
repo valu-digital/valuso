@@ -89,18 +89,47 @@ use Zend\Console\Request as ConsoleRequest;
  */
 class ServiceController extends AbstractActionController
 {
+    /**
+     * HTTP status code for successful operation
+     * @var int
+     */
     const STATUS_SUCCESS = 200;
     
+    /**
+     * HTTP status code for "not found" exceptions
+     * @var int
+     */
     const STATUS_NOT_FOUND = 404;
     
+    /**
+     * HTTP status code for unknown exceptions
+     * @var int
+     */
     const STATUS_UNKNOWN_EXCEPTION = 500;
     
+    /**
+     * HTTP status code for "permission denied" exception
+     * @var int
+     */
     const STATUS_PERMISSION_DENIED = 403;
     
+    /**
+     * HTTP header to describe how verbose the
+     * errors should be
+     * @var string
+     */
     const HEADER_ERRORS = 'X-VALU-ERRORS';
     
+    /**
+     * Header value for verbose error messages
+     * @var string
+     */
     const HEADER_ERRORS_VERBOSE = 'verbose';
     
+    /**
+     * Header value for verbose normal error messages
+     * @var string
+     */
     const HEADER_ERRORS_DEFAULT = 'default';
 	
 	/**
