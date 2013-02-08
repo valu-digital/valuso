@@ -122,7 +122,7 @@ class Worker{
 	public function exec($operation, $args = null)
 	{
 		$args = ($args) ?:$this->args;
-		$command = new Command($this->context, $this->service, $operation, $args);
+		$command = new Command($this->service, $operation, $args, $this->context);
 		
 		if ($this->priority !== null) {
 		    return $this->broker->queue($command, $this->callback);
