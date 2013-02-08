@@ -1,6 +1,7 @@
 <?php
 namespace ValuSo\Broker;
 
+use ValuSo\Command\CommandInterface;
 use Zend\EventManager\ResponseCollection;
 use Zend\EventManager\Event;
 use \ArrayObject;
@@ -16,25 +17,11 @@ class ServiceEvent
 {
 
     /**
-     * Service service
+     * Command instance
      *
-     * @var string
+     * @var CommandInterface
      */
-    protected $service;
-
-    /**
-     * Operation
-     *
-     * @var string
-     */
-    protected $operation;
-    
-    /**
-     * Service context
-     * 
-     * @var string
-     */
-    protected $context;
+    protected $command;
 
     /**
      * Exception
@@ -44,10 +31,27 @@ class ServiceEvent
     protected $exception;
     
     /**
-     * Response collection
-     * @var ResponseCollection
+     * Set command instance
+     * 
+     * @param CommandInterface $command
      */
-    protected $responses;
+    public function setCommand(CommandInterface $command)
+    {
+        $this->command = $command;
+        
+        // Both event and the command share same params
+        $this->setParams($command->getParams());
+    }
+    
+    /**
+     * Retrieve command instance
+     * 
+     * @return \ValuSo\Command\CommandInterface
+     */
+    public function getCommand()
+    {
+        return $this->command;
+    }
 
     /**
      * Retrieve the name of the service
@@ -56,19 +60,7 @@ class ServiceEvent
      */
     public function getService()
     {
-        return $this->service;
-    }
-
-    /**
-     * Set the name of the service
-     * 
-     * @param string
-     * @return ServiceEvent
-     */
-    public function setService($service)
-    {
-        $this->service = $service;
-        return $this;
+        return $this->getCommand()->getService();
     }
     
     /**
@@ -78,19 +70,7 @@ class ServiceEvent
      */
     public function getOperation()
     {
-        return $this->operation;
-    }
-
-    /**
-     * Set the name of the operation
-     * 
-     * @param string
-     * @return ServiceEvent      
-     */
-    public function setOperation($operation)
-    {
-        $this->operation = $operation;
-        return $this;
+        return $this->getCommand()->getOperation();
     }
 
     /**
@@ -122,21 +102,9 @@ class ServiceEvent
      */
     public function getContext()
     {
-        return $this->context;
+        return $this->getCommand()->getContext();
     }
 
-    /**
-     * Set current service context
-     * 
-     * @param unknown_type $context
-     * @return ServiceEvent
-     */
-    public function setContext($context)
-    {
-        $this->context = $context;
-        return $this;
-    }
-    
 	/**
 	 * Retrieve responses
 	 * 
@@ -144,42 +112,6 @@ class ServiceEvent
      */
     public function getResponses()
     {
-        return $this->responses;
+        return $this->getCommand()->getResponses();
     }
-
-	/**
-	 * Set responses
-	 * 
-     * @param \Zend\EventManager\ResponseCollection $responses
-     * @return ServiceEvent
-     */
-    public function setResponses($responses)
-    {
-        $this->responses = $responses;
-        return $this;
-    }
-    
-    /**
-	 * Create a new service event
-	 *
-	 * @param string $name
-	 * @param string $context
-	 * @param string $service
-	 * @param string $operation
-	 * @param array $argv
-	 * @return ServiceEvent
-	 */
-	protected static function create($name, $context, $service, $operation, $argv)
-	{
-	    $argv = is_null($argv) ? new ArrayObject() : $argv;
-	    
-	    $event = new ServiceEvent();
-	    $event->setName($name);
-	    $event->setContext($context);
-	    $event->setService($service);
-	    $event->setOperation($operation);
-	    $event->setParams($argv);
-	
-	    return $event;
-	}
 }
