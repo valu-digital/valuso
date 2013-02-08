@@ -2,15 +2,18 @@
 namespace ValuSo\Broker;
 
 use	SplObjectStorage;
-use	Valu\Service\Exception;
+use Traversable;
+use	ValuSo\Exception;
 use	ValuSo\Feature;
-use	Valu\Service\ServiceInterface;
-use Valu\Service\Invoker\DefinitionBased;
+use ValuSo\Invoker\DefinitionBased;
+use ValuSo\Command\CommandManager;
 use Zend\Cache\Storage\StorageInterface;
 use	Zend\Loader\PluginClassLoader;
 use Zend\EventManager\EventManagerInterface;
 use	Zend\ServiceManager\ServiceLocatorInterface;
 use	Zend\ServiceManager\ServiceLocatorAwareInterface;
+use	Zend\ServiceManager\ServiceManager;
+use Zend\Mvc\Service\ServiceManagerConfig;
 
 class ServiceLoader{
 	
@@ -37,11 +40,11 @@ class ServiceLoader{
 	private $unAttached;
 	
 	/**
-	 * Plugin manager
+	 * Service plugin manager
 	 * 
-	 * @var \Valu\Service\ServiceManager
+	 * @var \Valu\Service\ServicePluginManager
 	 */
-	private $serviceManager = null;
+	private $servicePluginManager = null;
 
 	/**
 	 * Invoker
@@ -57,6 +60,20 @@ class ServiceLoader{
 	 */
 	private $cache;
 	
+	/**
+	 * PCRE pattern for ID matching
+	 * 
+	 * @var string
+	 */
+	private $validIdPattern = '/^[a-z]+[a-z0-9]*/i';
+	
+	/**
+	 * PCRE pattern for name matching
+	 *
+	 * @var string
+	 */
+	private $validNamePattern = '/^[a-z]+(\.?[0-9a-z]+)*$/i';
+	
 	public function __construct($options = null)
 	{
 		$this->services = array();
@@ -67,9 +84,16 @@ class ServiceLoader{
 		}
 	}
 	
+	/**
+	 * Configure service loader
+	 * 
+	 * @param array|\Traversable $options
+	 * @throws \InvalidArgumentException
+	 * @return \ValuSo\Broker\ServiceLoader
+	 */
 	public function setOptions($options)
 	{
-		if (!is_array($options) && !$options instanceof \Traversable) {
+		if (!is_array($options) && !$options instanceof Traversable) {
 			throw new \InvalidArgumentException(sprintf(
 				'Expected an array or Traversable; received "%s"',
 				(is_object($options) ? get_class($options) : gettype($options))
@@ -80,78 +104,105 @@ class ServiceLoader{
 			
 			$key = strtolower($key);
 			
-			if($key == 'services'){
-				$this->registerServices($value);
-			}
-			else if($key == 'locator' || $key == 'service_locator'){
-			    $this->setServiceLocator($value);
-			}
-			else if($key == 'cache'){
-			    $this->setCache($value);
+			switch ($key) {
+			    case 'services':
+			        $this->registerServices($value);
+			        break;
+			    case 'locator':
+			    case 'service_locator':
+			        $this->setServiceLocator($value);
+			        break;
+		        case 'service_manager':
+		            $this->configureServiceManager($value);
+		            break;
+			    case 'cache':
+			        $this->setCache($value);
+			        break;
 			}
 		}
 		
 		return $this;
 	}
 	
-	public function setServiceLocator(ServiceLocatorInterface $locator)
+	/**
+	 * Configure internal service manager
+	 * 
+	 * @param ServiceManagerConfig $configuration
+	 * @return \ValuSo\Broker\ServiceLoader
+	 */
+	public function configureServiceManager(ServiceManagerConfig $configuration)
 	{
-	    $this->getServiceManager()->setServiceLocator($locator);
+	    $configuration->configureServiceManager(
+            $this->getServicePluginManager());
 	    
+	    return $this; 
+	}
+	
+	/**
+	 * @see \Zend\ServiceManager\ServiceManager::addPeeringServiceManager()
+	 */
+	public function addPeeringServiceManager(ServiceManager $manager)
+	{
+	    $this->getServicePluginManager()
+	         ->addPeeringServiceManager($manager);
 	    return $this;
 	}
 	
-	public function getServiceLocator()
+	/**
+	 * @see \Zend\ServiceManager\ServiceManager::addInitializer()
+	 */
+	public function addInitializer($initializer, $topOfStack = true)
 	{
-	    return $this->getServiceManager()->getServiceLocator();
+	    $this->getServicePluginManager()
+	         ->addInitializer($initializer, $topOfStack = true);
+	    return $this;
 	}
 	
-	public function getServiceManager()
+	/**
+	 * Set main service locator so factories can have access to
+	 * it when building services
+	 * 
+	 * @param ServiceLocatorInterface $locator
+	 * @return \ValuSo\Broker\ServiceLoader
+	 */
+	public function setServiceLocator(ServiceLocatorInterface $locator)
 	{
-	    if($this->serviceManager === null){
-	        $this->serviceManager = new ServiceManager();
-	        $this->serviceManager->setInvoker($this->getInvoker());
-	        
-	        $self = $this;
-	         
-	        $this->serviceManager->addInitializer(function ($instance, $serviceManager) use ($self) {
-	            
-	        	$name     = $serviceManager->getCreationInstanceName();
-	        	$options  = $serviceManager->getCreationInstanceOptions();
-	        	 
-	        	/**
-	        	 * Configure service
-	        	*/
-	        	if( $options !== null && sizeof($options) &&
-	        		$instance instanceof Feature\ConfigurableInterface){
-	        	    
-	        		$instance->setConfig($options);
-	        	}
-	        
-	        	/**
-	        	 * Provide shared invoker instance
-	        	 */
-	        	if( $instance instanceof Feature\InvokerAwareInterface &&
-	        			$instance instanceof Feature\DefinitionProviderInterface){
-	        		 
-	        		$instance->setInvoker($self->getInvoker());
-	        	}
-	        });
-	    }
-	    
-	    return $this->serviceManager; 
+	    $this->getServicePluginManager()->setServiceLocator($locator);
+	    return $this;
+	}
+	
+	/**
+	 * Retrieve main service locator
+	 * 
+	 * @return ServiceLocatorInterface
+	 */
+	public function getServiceLocator()
+	{
+	    return $this->getServicePluginManager()->getServiceLocator();
 	}
 	
 	/**
 	 * Batch register services
 	 * 
-	 * @param array $services
+	 * @param array|\Traversable $services
 	 * @throws \InvalidArgumentException
 	 * @return \ValuSo\Broker\ServiceLoader
 	 */
-	public function registerServices(array $services)
+	public function registerServices($services)
 	{
+	    
+	    if (!is_array($services) && !($services instanceof Traversable)) {
+	        throw new Exception\InvalidArgumentException(sprintf(
+                'Expected an array or Traversable; received "%s"',
+                (is_object($services) ? get_class($services) : gettype($services))
+	        ));
+	    }
+	    
 		foreach($services as $key => $impl){
+		    
+		    if (is_string($impl)) {
+		        $impl = ['name' => $impl];
+		    }
 		    
 		    $enabled = isset($impl['enabled']) ? $impl['enabled'] : true;
 		    
@@ -161,23 +212,27 @@ class ServiceLoader{
 		    
 			$id 		= isset($impl['id']) ? $impl['id'] : $key;
 			$name 	    = isset($impl['name']) ? $impl['name'] : null;
-			$class 		= isset($impl['class']) ? $impl['class'] : null;
+			$service 	= isset($impl['service']) ? $impl['service'] : null;
 			$factory 	= isset($impl['factory']) ? $impl['factory'] : null;
 			$options 	= isset($impl['options']) ? $impl['options'] : null;
 			$priority 	= isset($impl['priority']) ? $impl['priority'] : 1;
+			
+			if (!$service && isset($impl['class'])) {
+			    $service = $impl['class'];
+			}
 
 			if(is_null($options) && isset($impl['config'])){
 			    $options = $impl['config'];
 			}
 			
 			if(!$name){
-				throw new \InvalidArgumentException('Service name is not defined for service: '.$id);
+				throw new Exception\InvalidArgumentException('Service name is not defined for service: '.$id);
 			}
 			
-			$this->registerService($id, $name, $class, $options, $priority);
+			$this->registerService($id, $name, $service, $options, $priority);
 			
 			if($factory){
-			    $this->setServiceFactory($id, $factory);
+			    $this->getServicePluginManager()->setFactory($id, $factory);
 			}
 		}
 		
@@ -189,15 +244,24 @@ class ServiceLoader{
 	 * 
 	 * @param string $id Unique service ID
 	 * @param string $name Service name
-	 * @param string $class Invokable service class name
+	 * @param string|object|null $service Service object or invokable service class name
 	 * @param array $options
 	 * @param int $priority
 	 * @return \ValuSo\Broker\ServiceLoader
 	 */
-	public function registerService($id, $name, $class = null, $options = array(), $priority = 1)
+	public function registerService($id, $name, $service = null, $options = array(), $priority = 1)
 	{
-
 	    $name = $this->normalizeService($name);
+	    
+	    if (!preg_match($this->validIdPattern, $id)) {
+	        throw new Exception\InvalidServiceException(sprintf(
+	                "Service ID '%s' is not valid (ID must begin with lower/uppercase letter a-z, followed by one or more letters or digits)", $id));
+	    }
+	    
+	    if (!preg_match($this->validNamePattern, $name)) {
+	        throw new Exception\InvalidServiceException(sprintf(
+                "Service name '%s' is not valid", $name));
+	    }
 	    
 	    if(!isset($this->services[$name])){
 	        $this->services[$name] = array();
@@ -218,27 +282,16 @@ class ServiceLoader{
 		$this->unAttached[$name][] = $id;
 		
 		// Register as invokable
-		if($class !== null){
-    		$this->getServiceManager()->setInvokableClass(
+		if(is_string($service)){
+    		$this->getServicePluginManager()->setInvokableClass(
     			$id, 
-    			$class
+    			$service
     		);
+		} elseif (is_object($service)) {
+		    $this->getServicePluginManager()->setService($id, $service);
 		}
 		
 		return $this;
-	}
-	
-	/**
-	 * Define service factory class name for service ID
-	 * 
-	 * @param string $id
-	 * @param string $factory
-	 * @return \ValuSo\Broker\ServiceLoader
-	 */
-	public function setServiceFactory($id, $factory)
-	{
-	    $this->getServiceManager()->setFactory($id, $factory);
-	    return $this;
 	}
 	
 	/**
@@ -268,7 +321,7 @@ class ServiceLoader{
 	            $options = $this->services[$name][$id]['options'];
 	        }
 	        
-	        $instance = $this->getServiceManager()->get($id, $options);
+	        $instance = $this->getServicePluginManager()->get($id, $options);
 	        return $instance;
 	    }
 	    catch(\Zend\Loader\Exception\RuntimeException $e){
@@ -310,7 +363,7 @@ class ServiceLoader{
 	        return;
 	    }
 	    
-	    // Attach all
+	    // Attach all that have not been attached
 	    foreach($this->unAttached[$normalName] as $id){
             $commandManager->attach(
                 $name, 
@@ -336,10 +389,12 @@ class ServiceLoader{
 	 * Set cache adapter
 	 * 
 	 * @param StorageInterface $cache
+	 * @return ServiceLoader
 	 */
 	public function setCache(StorageInterface $cache)
 	{
 	    $this->cache = $cache;
+	    return $this;
 	}
 	
 	/**
@@ -358,7 +413,54 @@ class ServiceLoader{
 	    return $this->invoker;
 	}
 	
+	/**
+	 * Retrieve service name in normal form
+	 * 
+	 * @param string $name
+	 * @return string
+	 */
     public final function normalizeService($name){
 	    return strtolower($name);
+	}
+	
+	/**
+	 * Retrieve service manager
+	 *
+	 * @return \Valu\Service\ServiceManager
+	 */
+	protected function getServicePluginManager()
+	{
+	    if($this->servicePluginManager === null){
+	        $this->servicePluginManager = new ServicePluginManager();
+	        $this->servicePluginManager->setInvoker($this->getInvoker());
+	         
+	        $that = $this;
+	
+	        $this->servicePluginManager->addInitializer(function ($instance, $serviceManager) use ($that) {
+	             
+	            $name     = $serviceManager->getCreationInstanceName();
+	            $options  = $serviceManager->getCreationInstanceOptions();
+	             
+	            /**
+	             * Configure service
+	            */
+	            if($options !== null && sizeof($options) &&
+	               $instance instanceof Feature\ConfigurableInterface){
+	
+	                $instance->setConfig($options);
+	            }
+	             
+	            /**
+	             * Provide shared invoker instance
+	             */
+	            if($instance instanceof Feature\InvokerAwareInterface &&
+	               $instance instanceof Feature\DefinitionProviderInterface){
+	
+	                $instance->setInvoker($that->getInvoker());
+	            }
+	        });
+	    }
+	     
+	    return $this->servicePluginManager;
 	}
 }
