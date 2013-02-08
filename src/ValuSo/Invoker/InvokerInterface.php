@@ -1,10 +1,9 @@
 <?php
 namespace ValuSo\Invoker;
 
-use Valu\Service\ServiceInterface;
-use Valu\Service\ServiceEvent;
+use ValuSo\Command\CommandInterface;
 
 interface InvokerInterface
 {
-    public function invoke(ServiceInterface $service, ServiceEvent $e);
+    public function invoke($service, CommandInterface $c);
 }
