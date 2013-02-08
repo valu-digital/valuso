@@ -1,10 +1,9 @@
 <?php
 namespace ValuSo\Broker;
 
-use ValuSo\Command\CommandInterface;
-
 use ValuSo\Command\Command;
 use ValuSo\Command\CommandManager;
+use ValuSo\Command\CommandInterface;
 use ValuSo\Broker\ServiceServiceLoader;
 use ValuSo\Feature;
 use	ValuSo\Exception\ServiceNotFoundException;
@@ -56,7 +55,7 @@ class ServiceBroker{
 	 */
 	public function __construct($options = null){
 	    
-	    $this->setDefaultContext(self::CONTEXT_NATIVE);
+	    $this->setDefaultContext(Command::CONTEXT_NATIVE);
 		
 		if(null !== $options){
 		    $this->setOptions($options);
@@ -124,7 +123,7 @@ class ServiceBroker{
 		$this->loader = $loader;
 		$that = $this;
 		
-		$this->loader->getPluginManager()->addInitializer(function ($instance) use ($that) {
+		$this->loader->addInitializer(function ($instance) use ($that) {
 		    if($instance instanceof Feature\ServiceBrokerAwareInterface){
 		        $instance->setServiceBroker($that);
 		    }
@@ -220,12 +219,12 @@ class ServiceBroker{
 	public function executeInContext($context, $service, $operation, $argv = array(), $callback = null)
 	{
 	    $command = new Command(
-            $this->getDefaultContext(),
             $service,
             $operation,
-            $argv);
+            $argv,
+	        $context);
     
-	    $this->dispatch($command, $callback);
+	    return $this->dispatch($command, $callback);
 	}
 	
 	/**
@@ -268,7 +267,8 @@ class ServiceBroker{
 	    $exception = null;
 	    
 	    if(!$this->exists($command->getService())){
-	        throw new ServiceNotFoundException(sprintf('Service "%s" not found', $command->getService()));
+	        throw new ServiceNotFoundException(sprintf(
+                'Service "%s" not found', $command->getService()));
 	    }
 	    
 	    $responses = null;
@@ -280,8 +280,9 @@ class ServiceBroker{
 		
 		// Prepare and trigger init.<service>.<operation> event
 		$initEvent = strtolower('init.'.$service.'.'.$operation);
+		
 		if(!$this->getEventManager()->getListeners($initEvent)->isEmpty()){
-		    $e = $this->createEvent($initEvent, $context, $service, $operation, $argv);
+		    $e = $this->createEvent($initEvent, $command);
 		    
 		    $eventResponses = $this->trigger(
 	            $e,
@@ -290,39 +291,39 @@ class ServiceBroker{
 		    
 		    if($eventResponses->stopped() && $eventResponses->last() === false){
 		        $responses = new ResponseCollection();
-		        $responses->push(false);
 		        $responses->setStopped(true);
-		        	
-		        return $responses;
 		    }
 		}
 		
-		// Trigger actual service event
-		try{
-    		if($callback){
-    			$responses = $this->getCommandManager()->triggerUntil(
-    				$command,
-    				$callback
-    			);
-    		}
-    		else{
-    			$responses = $this->getCommandManager()->trigger(
-    				$command
-    			);
-    		}
-		} catch(\Exception $ex) {
-		    $exception = $ex;
+		// Dispatch command
+		if ($responses === null) {
+		    try{
+		        if($callback){
+		            $responses = $this->getCommandManager()->triggerUntil(
+	                    $command,
+	                    $callback
+		            );
+		        }
+		        else{
+		            $responses = $this->getCommandManager()->trigger(
+	                    $command
+		            );
+		        }
+		    } catch(\Exception $ex) {
+		        $exception = $ex;
+		    }
 		}
 		
 		// Prepare and trigger final.<service>.<operation> event
 		$finalEvent = strtolower('final.'.$service.'.'.$operation);
+		
 		if(!$this->getEventManager()->getListeners($finalEvent)->isEmpty()){
 		    
-		    $e = $this->createEvent($finalEvent, $context, $service, $operation, $argv);
-		    $e->setException($exception);
+		    $e = $this->createEvent($finalEvent, $command);
 		    
-		    if ($responses) {
-		        $e->setResponses($responses);
+		    // Set exception
+		    if ($exception) {
+		        $e->setException($exception);
 		    }
 		    
 		    $this->trigger($e);
@@ -348,6 +349,22 @@ class ServiceBroker{
 	protected function trigger(ServiceEvent $event, $callback = null)
 	{
 		return $this->getEventManager()->trigger($event, $callback);
+	}
+	
+	/**
+	 * Create a new service event
+	 * 
+	 * @param string $name
+	 * @param CommandInterface $command
+	 * @return \ValuSo\Broker\ServiceEvent
+	 */
+	protected function createEvent($name, CommandInterface $command)
+	{
+	    $event = new ServiceEvent();
+	    $event->setName($name);
+	    $event->setCommand($command);
+	    
+	    return $event;
 	}
 	
 	/**
