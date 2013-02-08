@@ -1,7 +1,7 @@
 <?php
 namespace ValuSo\Exception;
 
-class ServiceException extends \Valu\Stdlib\Exception\ParametrizedException
+class ServiceException extends ParametrizedException
 {
     protected $code = 1006;
 }
