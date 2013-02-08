@@ -11,7 +11,7 @@ use Zend\ServiceManager\AbstractPluginManager;
  * services and initializing the services as needed
  * 
  */
-class ServiceManager extends AbstractPluginManager
+class ServicePluginManager extends AbstractPluginManager
 {
     
     /**
