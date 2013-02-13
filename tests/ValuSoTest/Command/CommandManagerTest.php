@@ -1,12 +1,11 @@
 <?php
 namespace ValuSoTest\Command;
 
+use ValuSo\Broker\ServiceLoader;
+
 use ValuSo\Command\Command;
-
 use ValuSo\Exception\SkippableException;
-
 use ValuSoTest\TestAsset\ClosureService;
-
 use PHPUnit_Framework_TestCase;
 use ValuSo\Command\CommandManager;
 
@@ -43,11 +42,82 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
         parent::tearDown();
     }
     
+    public function testAttach()
+    {
+        $s1 = new ClosureService();
+        $listener = $this->commandManager->attach('test', $s1, 1000);
+        
+        $this->assertInstanceOf('ValuSo\Command\LazyCallbackHandler', $listener);
+        $this->assertSame($s1, $listener->getCallback());
+        $this->assertEquals(1000,$listener->getMetadatum('priority'));
+    }
+    
+    public function testDetach()
+    {
+        $s1 = new ClosureService();
+        $cmd = new Command('test');
+        
+        $listener = $this->commandManager->attach('test', $s1, 1000);
+        $this->assertFalse($this->commandManager->trigger($cmd)->isEmpty());
+        $this->assertTrue($this->commandManager->detach($listener));
+        $this->assertTrue($this->commandManager->trigger($cmd)->isEmpty());
+    }
+    
     public function testServiceIsExcecuted()
     {
         $s1 = new ClosureService(function(){return 'executed';});
         $this->commandManager->attach('test', $s1);
-        $responses = $this->commandManager->trigger('test');
+        
+        $cmd = new Command('test', 'test');
+        $responses = $this->commandManager->trigger($cmd);
+        
+        $this->assertEquals(
+            'executed',
+            $responses->last());
+    }
+    
+    public function testServiceNameIsCaseInsensitiveWhenExecuted()
+    {
+        $s1 = new ClosureService(function(){return 'executed';});
+        $this->commandManager->attach('test', $s1);
+        
+        $cmd = new Command('Test');
+        $responses = $this->commandManager->trigger($cmd);
+        
+        $this->assertEquals(
+            'executed',
+            $responses->last());
+    }
+    
+    public function testCorrectServiceIsExcecuted()
+    {
+        $s1 = new ClosureService(function(){return 'first';});
+        $s2 = new ClosureService(function(){return 'second';});
+        $this->commandManager->attach('test1', $s1);
+        $this->commandManager->attach('test2', $s2);
+    
+        $cmd = new Command('test1', 'test');
+        $responses = $this->commandManager->trigger($cmd);
+    
+        $this->assertEquals(
+            'first',
+            $responses->first());
+        
+        $this->assertEquals(
+            'first',
+            $responses->last());
+    }
+    
+    public function testLazyServiceIsExcetuted()
+    {
+        $this->commandManager->attach('Test.Service', 'testid');
+        $this->commandManager->getServiceLoader()->registerService(
+                'testid', 
+                'Test.Service', 
+                new ClosureService(function($c){return $c->getOperation() == 'run' ? 'executed' : null;}));
+        
+        $cmd = new Command('Test.Service', 'run');
+        $responses = $this->commandManager->trigger($cmd);
         
         $this->assertEquals(
             'executed',
@@ -61,7 +131,8 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
         $this->commandManager->attach('test', $s1);
         $this->commandManager->attach('test', $s2);
         
-        $responses = $this->commandManager->trigger('test');
+        $cmd = new Command('test', 'test');
+        $responses = $this->commandManager->trigger($cmd);
         
         $this->assertEquals(
                 'first',
@@ -76,13 +147,13 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
     {
         $s1 = new ClosureService(function($command){return $command;});
         
-        $command = new Command('test');
+        $cmd = new Command('test', 'test');
         
         $cb = $this->commandManager->attach('test', $s1);
-        $responses = $this->commandManager->trigger($command);
+        $responses = $this->commandManager->trigger($cmd);
         
         $this->assertSame(
-            $command,
+            $cmd,
             $responses->first());
     }
     
@@ -93,7 +164,8 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
         $this->commandManager->attach('test', $s1);
         $this->commandManager->attach('test', $s2);
         
-        $responses = $this->commandManager->trigger('test');
+        $cmd = new Command('test', 'test');
+        $responses = $this->commandManager->trigger($cmd);
         
         $this->assertEquals(
                 'first',
@@ -110,7 +182,8 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
         $this->commandManager->attach('test', $s1);
         $this->commandManager->attach('test', $s2);
         
-        $responses = $this->commandManager->trigger('test');
+        $cmd = new Command('test', 'test');
+        $responses = $this->commandManager->trigger($cmd);
     }
     
     /**
@@ -120,7 +193,9 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
     {
         $s1 = new ClosureService(function(){throw new SkippableException('Skippable');});
         $this->commandManager->attach('test', $s1);
-        $responses = $this->commandManager->trigger('test');
+        
+        $cmd = new Command('test', 'test');
+        $responses = $this->commandManager->trigger($cmd);
     }
     
     /**
@@ -132,7 +207,9 @@ class CommandManagerTest extends PHPUnit_Framework_TestCase
         $s2 = new ClosureService(function(){return true;});
         
         $this->commandManager->attach('test', $s1);
-        $responses = $this->commandManager->trigger('test');
+        
+        $cmd = new Command('test', 'test');
+        $responses = $this->commandManager->trigger($cmd);
     }
 }
 

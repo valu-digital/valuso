@@ -9,6 +9,8 @@ class ClosureService implements ConfigurableInterface
     
     public $config;
     
+    public static $default;
+    
     public function __construct($options = null)
     {
         if ($options instanceof \Closure) {
@@ -21,11 +23,21 @@ class ClosureService implements ConfigurableInterface
     public function __invoke($command)
     {
         $closure = $this->closure;
+        
+        if (!$closure && self::$default) {
+            $closure = self::$default;
+        }
+        
         return $closure ? $closure($command) : null;
     }
     
     public function setConfig($config)
     {
         $this->config = $config;
+    }
+    
+    public static function setDefaultClosure($default)
+    {
+        self::$default = $default;
     }
 }

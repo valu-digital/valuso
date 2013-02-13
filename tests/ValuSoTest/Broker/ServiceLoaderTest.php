@@ -1,6 +1,8 @@
 <?php
 namespace ValuSoTest\Broker;
 
+use ValuSo\Command\Command;
+
 use ValuSo\Command\CommandManager;
 use ValuSoTest\TestAsset\ClosureService;
 use Zend\Mvc\Service\ServiceManagerConfig;
@@ -89,6 +91,11 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         );
         
         $this->assertEquals($locator, $this->serviceLoader->getServiceLocator());
+    }
+    
+    public function testGetCommandManager()
+    {
+        $this->assertInstanceof('ValuSo\Command\CommandManager', $this->serviceLoader->getCommandManager());
     }
     
     public function testRegisterServiceUsingClassName()
@@ -189,11 +196,9 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         ];
         
         $this->serviceLoader->registerServices($services);
-        
-        $cm = new CommandManager();
-        $this->serviceLoader->attachListeners($cm, 'test');
-        
-        $responses = $cm->trigger('test');
+
+        $cmd = new Command('test');
+        $responses = $this->serviceLoader->getCommandManager()->trigger($cmd);
         
         // Assert that both services were executed
         $this->assertEquals(2, $responses->count());
@@ -245,11 +250,9 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         ];
         
         $this->serviceLoader->registerServices($services);
-        
-        $cm = new CommandManager();
-        $this->serviceLoader->attachListeners($cm, 'Test.Service');
-        
-        $responses = $cm->trigger('Test.Service');
+
+        $cmd = new Command('Test.Service', 'test');
+        $responses = $this->serviceLoader->getCommandManager()->trigger($cmd);
         
         $this->assertEquals('service1', $responses->first());
         $this->assertEquals('service2', $responses->last());
