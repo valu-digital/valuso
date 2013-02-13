@@ -121,6 +121,17 @@ class CommandManager
     }
     
     /**
+     * Test whether any listeners exist for given service
+     * 
+     * @param string $service
+     * @return boolean
+     */
+    public function hasListeners($service)
+    {
+        return !empty($this->services[$service]);
+    }
+    
+    /**
      * Trigger all listeners for a given command
      *
      * Can emulate triggerUntil() if the last argument provided is a callback.
