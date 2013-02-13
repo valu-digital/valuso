@@ -32,6 +32,11 @@ class ServiceBrokerFactory implements FactoryInterface
      *         'abstract_factories' => [...] // See Zend\Mvc\Service\ServiceManagerConfig
      *         'shared'             => [...] // See Zend\Mvc\Service\ServiceManagerConfig
      *         'aliases'            => [...] // See Zend\Mvc\Service\ServiceManagerConfig
+     *         'cache'              => [
+     *             'enabled' => true|false, 
+     *             'adapter' => '<ZendCacheAdapter>', 
+     *             'service' => '<ServiceNameReturningCacheAdapter', 
+     *             <adapterConfig> => <value>...]
      *         'services' => [
      *             '<id>' => [
      *                 'name'     => '<ServiceName>', // Name of the service
@@ -80,8 +85,8 @@ class ServiceBrokerFactory implements FactoryInterface
             
             if (isset($cacheConfig['enabled']) && !$cacheConfig['enabled']) {
                 unset($config['cache']);
-            } elseif (!isset($cacheConfig['adapter'])) {
-                $cache = $serviceLocator->get('Cache');
+            } elseif (!isset($cacheConfig['adapter']) && isset($cacheConfig['service'])) {
+                $cache = $serviceLocator->get($cacheConfig['service']);
                 
                 if ($cache instanceof StorageInterface) {
                     $config['cache'] = $cache;
