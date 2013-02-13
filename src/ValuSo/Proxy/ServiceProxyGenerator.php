@@ -7,11 +7,7 @@ use Zend\Code\Generator\PropertyGenerator;
 use Zend\Code\Generator\ParameterGenerator;
 use Zend\Code\Generator\MethodGenerator;
 use Zend\Code\Generator\ClassGenerator;
-use Zend\Code\Generator\FileGenerator;
 use Zend\Code\Reflection\MethodReflection;
-use Doctrine\Common\Util\ClassUtils;
-use Doctrine\Common\Proxy\ProxyGenerator;
-use Doctrine\Common\Persistence\Mapping\ClassMetadata;
 use \ReflectionClass;
 use \ReflectionMethod;
 
