@@ -40,6 +40,13 @@ interface CommandInterface extends EventInterface
     public function setOperation($operation);
     
     /**
+     * Does a parameter exist?
+     * 
+     * @param string|int $param
+     */
+    public function hasParam($param);
+    
+    /**
      * Retrieve context
      * 
      * @return string
