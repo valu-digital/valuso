@@ -116,6 +116,14 @@ class Command
         
         return $params;
     }
+    
+    /**
+     * Does a parameter exist
+     */
+    public function hasParam($param)
+    {
+        return array_key_exists($param, $this->params);
+    }
 
     /**
      * @see CommandInterface::getService()
