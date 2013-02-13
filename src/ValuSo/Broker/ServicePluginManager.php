@@ -1,10 +1,11 @@
 <?php
 namespace ValuSo\Broker;
 
-use ValuSo\Feature\InvokerAwareInterface;
-use ValuSo\Invoker\InvokerInterface;
+use ValuSo\Proxy\ServiceProxyGenerator;
 use ValuSo\Exception;
+use ValuSo\Annotation\AnnotationBuilder;
 use Zend\ServiceManager\AbstractPluginManager;
+use Zend\Cache\Storage\StorageInterface;
 
 /**
  * Service manager is responsible of maintaining list of registered
@@ -27,13 +28,27 @@ class ServicePluginManager extends AbstractPluginManager
      * @var array
      */
     private $instanceOptions = array();
+
+    /**
+     * Cache
+     * 
+     * @var StorageInterface
+     */
+    private $cache;
     
     /**
-     * Invoker instance
+     * Proxy generator
      * 
-     * @var \ValuSo\Invoker\InvokerInterface
+     * @var ServiceProxyGenerator
      */
-    private $invoker;
+    private $proxyGenerator;
+    
+    /**
+     * Annotation builder
+     * 
+     * @var \ValuSo\Annotation\AnnotationBuilder
+     */
+    private $annotationBuilder;
     
     /**
      * Retrieve a service from the manager by name
@@ -61,7 +76,7 @@ class ServicePluginManager extends AbstractPluginManager
         
         // Wrap instance if it is not callable
         if (!is_callable($instance)) {
-            $instance = $this->wrapService($instance);
+            $instance = $this->wrapService($name, $instance);
             
             // Replace cached instance with wrapper
             if (isset($this->instances[$cName])) {
@@ -117,46 +132,79 @@ class ServicePluginManager extends AbstractPluginManager
         ));
     }
     
-    /**
-     * Sets invoker to use with invoker aware service wrappers
-     * 
-     * @param InvokerInterface $invoker
-     */
-    public function setInvoker(InvokerInterface $invoker)
+    public function setCache(StorageInterface $cache)
     {
-        $this->invoker = $invoker;
+        $this->cache = $cache;
     }
     
-    /**
-     * Retrieve invoker instance
-     * 
-     * @return \ValuSo\Invoker\InvokerInterface
-     */
-    public function getInvoker()
+    public function getCache()
     {
-        return $this->invoker;
+        return $this->cache;
     }
     
-    /**
-     * Wraps service with special service wrapper 
-     * 
-     * @param object $instance
-     * @return \ValuSo\Broker\ServiceWrapper
-     */
-    protected function wrapService($instance)
+    public function setProxyGenerator(ServiceProxyGenerator $proxyGenerator)
     {
-        $wrapper = new ServiceWrapper($instance);
-        
-        if ($wrapper instanceof InvokerAwareInterface) {
-            
-            if (!$this->getInvoker()) {
-                throw new Exception\RuntimeException(
-                    'ServiceManager is not configured properly; invoker is not set but it is requested by wrapper');
-            }
-            
-            $wrapper->setInvoker($this->getInvoker());
+        $this->proxyGenerator = $proxyGenerator;
+    }
+    
+    public function getProxyGenerator()
+    {
+        if (!$this->proxyGenerator) {
+            $this->proxyGenerator = new ServiceProxyGenerator();
         }
         
-        return $wrapper;
+        return $this->proxyGenerator;
+    }
+
+    /**
+     * @return \ValuSo\Annotation\AnnotationBuilder
+     */
+    public function getAnnotationBuilder()
+    {
+        if (!$this->annotationBuilder) {
+            $this->setAnnotationBuilder(new AnnotationBuilder());
+        }
+        
+        return $this->annotationBuilder;
+    }
+
+	/**
+     * @param \ValuSo\Annotation\AnnotationBuilder $annotationBuilder
+     */
+    public function setAnnotationBuilder($annotationBuilder)
+    {
+        $this->annotationBuilder = $annotationBuilder;
+    }
+
+	/**
+     * Wrap service with proxy instance
+     * 
+     * @param string $name
+     * @param object $instance
+     * @return object
+     */
+    protected function wrapService($name, $instance)
+    {
+        if ($this->cache && ($fqcn = $this->cache->getItem($name)) && class_exists($fqcn)) {
+            return new $fqcn($instance);
+        } else {
+            $className      = get_class($instance);
+            $proxyGenerator = $this->getProxyGenerator();
+            $fqcn           = $proxyGenerator->getProxyClassName($className);
+            
+            $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
+            $config['name'] = $name; // Overwrite any previously configured name
+            
+            $proxyGenerator->generateProxyClass($instance, $config);
+            require_once $proxyGenerator->getProxyFileName($className);
+        
+            $proxy = new $fqcn($instance);
+            
+            if ($this->cache) {
+                $this->cache->setItem($name, $fqcn);
+            }
+        
+            return $proxy;
+        }
     }
 }
