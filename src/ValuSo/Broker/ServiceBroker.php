@@ -28,13 +28,6 @@ class ServiceBroker{
 	private $loader;
 	
 	/**
-	 * Command manager
-	 * 
-	 * @var CommandManager
-	 */
-	private $commandManager;
-	
-	/**
 	 * Event manager
 	 *
 	 * @var EventManagerInterface
@@ -273,11 +266,6 @@ class ServiceBroker{
 	    
 	    $responses = null;
 		
-		$this->getLoader()->attachListeners(
-	        $this->getCommandManager(),
-	        $command->getService()
-		);
-		
 		// Prepare and trigger init.<service>.<operation> event
 		$initEvent = strtolower('init.'.$service.'.'.$operation);
 		
@@ -298,17 +286,10 @@ class ServiceBroker{
 		// Dispatch command
 		if ($responses === null) {
 		    try{
-		        if($callback){
-		            $responses = $this->getCommandManager()->triggerUntil(
-	                    $command,
-	                    $callback
-		            );
-		        }
-		        else{
-		            $responses = $this->getCommandManager()->trigger(
-	                    $command
-		            );
-		        }
+		        $responses = $this->getLoader()->getCommandManager()->trigger(
+                    $command,
+                    $callback
+	            );
 		    } catch(\Exception $ex) {
 		        $exception = $ex;
 		    }
@@ -365,19 +346,5 @@ class ServiceBroker{
 	    $event->setCommand($command);
 	    
 	    return $event;
-	}
-	
-	/**
-	 * Retrieve command manager
-	 * 
-	 * @return \ValuSo\Broker\CommandManager
-	 */
-	private function getCommandManager()
-	{
-	    if ($this->commandManager === null) {
-	        $this->commandManager = new CommandManager();
-	    }
-	    
-	    return $this->commandManager;
 	}
 }
