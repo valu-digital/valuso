@@ -1,243 +1,477 @@
 <?php
 namespace ValuSo\Proxy;
 
+use ValuSo\Command\CommandInterface;
+use ValuSo\Exception;
+use Zend\Code\Generator\PropertyGenerator;
+use Zend\Code\Generator\ParameterGenerator;
+use Zend\Code\Generator\MethodGenerator;
+use Zend\Code\Generator\ClassGenerator;
+use Zend\Code\Generator\FileGenerator;
+use Zend\Code\Reflection\MethodReflection;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Common\Proxy\ProxyGenerator;
 use Doctrine\Common\Persistence\Mapping\ClassMetadata;
+use \ReflectionClass;
+use \ReflectionMethod;
 
-class ServiceProxyGenerator extends ProxyGenerator
+class ServiceProxyGenerator
 {
-    const DEFAULT_SERVICE_PROXY_NS = 'ValuSo\\Proxy';
+    const DEFAULT_SERVICE_PROXY_NS = 'ValuSoProxy\\Proxy';
     
     const EVENT_PRE = 'pre';
     
     const EVENT_POST = 'post';
+    
+    const MARKER = '__CG__';
 
     /**
-     * Proxy namespace
+     * Service configuration
      * 
-     * @var string
-     */
-    protected $proxyNamespace;
-    
-    /**
-     * Service configurations
-     * 
-     * @var ArrayObject
+     * @var unknown_type
      */
     private $serviceConfig;
+    
+    /**
+     * @var string The namespace that contains all proxy classes.
+     */
+    private $proxyNamespace;
+
+    /**
+     * @var string The directory that contains all proxy classes.
+     */
+    private $proxyDirectory;
     
     /**
      * @see Doctrine\Common\Proxy\ProxyGenerator::__construct()
      */
     public function __construct($proxyDir = null, $proxyNs = null)
     {
-        $proxyDir = $proxyDir ?: sys_get_temp_dir();
-        $proxyNs  = $proxyNs  ?: static::DEFAULT_SERVICE_PROXY_NS;
-
-        $this->proxyNamespace = $proxyNs;
-        
-        parent::__construct($proxyDir, $proxyNs);
-        
-        $this->setPlaceholder('constructorImpl', array($this, 'emptyPlaceholder'));
-        $this->setPlaceholder('magicSet', array($this, 'emptyPlaceholder'));
-        $this->setPlaceholder('magicGet', array($this, 'emptyPlaceholder'));
-        $this->setPlaceholder('magicIsset', array($this, 'emptyPlaceholder'));
-        $this->setPlaceholder('methods', array($this, 'makeMethods'));
+        $this->proxyDirectory = $proxyDir ?: sys_get_temp_dir();
+        $this->proxyNamespace = $proxyNs  ?: static::DEFAULT_SERVICE_PROXY_NS;
     }
-    
-    /**
-     * Generate a service proxy class based on service configurations
-     * and class metadata
-     * 
-     * @param array $serviceConfig
-     * @param ClassMetadata $class
-     */
-    public function generateServiceProxy($serviceConfig, ClassMetadata $class)
+
+    public function generateProxyClass($entity, $config)
     {
-        $this->serviceConfig = $serviceConfig;
+        if (!is_object($entity)) {
+            if ((is_string($entity) && (!class_exists($entity))) // non-existent class
+                    || (!is_string($entity)) // not an object or string
+            ) {
+                throw new Exception\InvalidArgumentException(sprintf(
+                        '%s expects an object or valid class name; received "%s"',
+                        __METHOD__,
+                        var_export($entity, 1)
+                ));
+            }
+        }
         
-        return parent::generateProxyClass($class);
+        $this->serviceConfig = $config;
+        
+        $reflection  = new ReflectionClass($entity);
+        $className = $reflection->getName();
+        
+        $class = ClassGenerator::fromArray([
+            'name' => $this->getProxyClassName($className),
+            'namespace_name' => $this->getProxyNamespace($className),
+            'extended_class' => '\\' . $className,
+            'implemented_interfaces' => array('\Zend\EventManager\EventManagerAwareInterface'),
+            'methods' => $this->generateMethods($reflection),
+            'properties' => [
+                new PropertyGenerator('__wrappedObject', null, PropertyGenerator::FLAG_PUBLIC),
+                new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE)
+            ]
+        ]);
+        
+        $source = "<?php\n" . $class->generate();
+        
+        $fileName        = $this->getProxyFileName($className);
+        $parentDirectory = dirname($fileName);
+        
+        if ( ! is_dir($parentDirectory) && (false === @mkdir($parentDirectory, 0775, true))) {
+            throw Exception\RuntimeException('Proxy directory '.$parentDirectory.' not found');
+        }
+        
+        if ( ! is_writable($parentDirectory)) {
+            throw Exception\RuntimeException('Proxy directory '.$parentDirectory.' is not writable');
+        }
+        
+        $tmpFileName = $fileName . '.' . uniqid('', true);
+        file_put_contents($tmpFileName, $source);
+        rename($tmpFileName, $fileName);
     }
     
     public function getProxyClassName($className)
     {
-        return ClassUtils::generateProxyClassName($className, $this->proxyNamespace);
+        return rtrim($this->proxyNamespace, '\\') . '\\'.self::MARKER.'\\' . ltrim($className, '\\');
+    }
+    
+    public function getProxyFilename($className)
+    {
+        $baseDirectory = $this->proxyDirectory;
+        
+        return rtrim($baseDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . self::MARKER
+        . str_replace('\\', '', $className) . '.php';
+    }
+
+    public function getProxyNamespace($className)
+    {
+        $proxyClassName = $this->getProxyClassName($className);
+        $parts = explode('\\', strrev($proxyClassName), 2);
+    
+        return strrev($parts[1]);
+    }
+
+    /**
+     * Generate methods for ClassGenerator
+     * 
+     * @param ReflectionClass $reflectionClass
+     * @return multitype:\Zend\Code\Generator\MethodGenerator
+     */
+    protected function generateMethods(ReflectionClass $reflectionClass)
+    {
+        $methods = array();
+        $methods[] = $this->generateConstructor($reflectionClass);
+        $methods[] = $this->generateInvoker($reflectionClass);
+        $methods[] = $this->generateEventManagerSetter($reflectionClass);
+        $methods[] = $this->generateEventManagerGetter($reflectionClass);
+        $methods[] = $this->generateOperationNotFound($reflectionClass);
+        $methods[] = $this->generateMatchContext($reflectionClass);
+        
+        $methods = array_merge(
+            $methods,
+            $this->generateServiceMethods($reflectionClass));
+        
+        return $methods;
     }
     
     /**
-     * Generates the magic setter (currently unused)
-     *
-     * @param  \Doctrine\Common\Persistence\Mapping\ClassMetadata $class
-     *
-     * @return string
+     * Generate and retrieve proxy constuctor method
+     * 
+     * @param ReflectionClass $reflectionClass
+     * @return \Zend\Code\Generator\MethodGenerator
      */
-    public function emptyPlaceholder(ClassMetadata $class)
+    protected function generateConstructor(ReflectionClass $reflectionClass)
     {
-        return '';
+        return new MethodGenerator(
+            '__construct',
+            [new ParameterGenerator('wrappedObject')],
+            MethodGenerator::FLAG_PUBLIC,
+            'if ($wrappedObject instanceof \ValuSo\Feature\ProxyAwareInterface) {' . "\n" .
+            '    $wrappedObject->setServiceProxy($this);' . "\n" .
+            '}' . "\n" .
+            '$this->__wrappedObject = $wrappedObject;' . "\n"
+        );
     }
-
+    
     /**
-     * {@inheritDoc}
+     * Generate and retrieve invoker method
+     * 
+     * @return MethodGenerator
      */
-    public function makeMethods(ClassMetadata $class)
+    protected function generateInvoker(ReflectionClass $reflectionClass)
     {
-        $methods            = '';
-        $methodNames        = array();
         $invokeParams       = array();
-        $reflectionMethods  = $class->getReflectionClass()->getMethods();
-
+        $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
+        
+        // Loop through all PUBLIC methods this time to generate invoke mapping
         foreach ($reflectionMethods as $method) {
-            
+
             $name = $method->getName();
             
-            if (
-                $method->isConstructor()
-                || isset($methodNames[$name])
-                || (substr($name, 0, 2) == '__')
-                || $method->isFinal()
-                || $method->isStatic()
-            ) {
+            // This operation is not available
+            if (!$this->getOperationConfig($name)) {
                 continue;
             }
             
-            $config = $this->getOperationConfig($name);
-
-            $methodNames[$name] = true;
-            $methods .= "\n    /**\n"
-                . "     * {@inheritDoc}\n"
-                . "     */\n"
-                . '    public function ';
-
-            if ($method->returnsReference()) {
-                $methods .= '&';
+            $invokeParams[$name] = ['assoc' => [], 'numeric' => []];
+        
+            $index = 0;
+            foreach ($method->getParameters() as $param) {
+                if ($param->isDefaultValueAvailable()) {
+                    $defaultValue = var_export($param->getDefaultValue(), true);
+                } else {
+                    $defaultValue = 'null';
+                }
+        
+                $invokeParams[$name]['assoc'][] = '$command->getParam("'.$param->getName().'", '.$defaultValue.')';
+                $invokeParams[$name]['numeric'][] = '$command->getParam('.$index.', '.$defaultValue.')';
+                
+                $index++;
             }
-
-            $methods .= $name . '(';
-            $firstParam = true;
-            $parameterString = $argumentString = '';
-            $parameters = array();
-            $paramNames = array();
+        }
+        
+        // Define body for __invoke
+        $invokeImpl =
+        'if (!in_array($command->getOperation(), ["' . implode('","', array_keys($invokeParams)) . '"]))'. "\n" .
+        "{\n".
+        '    $this->__operationNotFound($command);' . "\n" .
+        '}' . "\n\n";
+        
+        $invokeImpl .= '$isAssoc = !$command->hasParam(0);' . "\n";
+        $invokeImpl .= 'switch ($command->getOperation) {' . "\n";
+        
+        foreach ($invokeParams as $methodName => $params) {
+            $invokeImpl .= '    case "'.$methodName.'":' . "\n";
+            $context     = $this->getOperationConfig($methodName, 'context', '*');
+            
+            if ($context !== '*') {
+                $contexts = (array) $context;
+                
+                $invokeImpl .= '        if(!$this->__matchContext($command->getContext(), array("'.implode('","', $contexts).'"))) {' . "\n"
+                             . '            $this->__operationNotFound($command);' . "\n"
+                             . '        }' . "\n";
+            }
+        
+            if (!sizeof($params['assoc'])) {
+                $invokeImpl .= '        return $this->' . $methodName . "();\n";
+            } else {
+        
+                $invokeImpl .= '        if ($isAssoc) {' . "\n"
+                            .  '            return $this->' . $methodName . '(' . implode(', ', $params['assoc']) . ");\n"
+                            .  '        } else {' . "\n"
+                            .  '            return $this->' . $methodName . '(' . implode(', ', $params['numeric']) . ");\n"
+                            .  '        }' . "\n";
+            }
+        
+            $invokeImpl .= '        break;' . "\n";
+        }
+        
+        $invokeImpl .= "}\n"; // end switch
+        
+        $mg = new MethodGenerator(
+            '__invoke',
+            [new ParameterGenerator('command', '\ValuSo\Command\CommandInterface')],
+            MethodGenerator::FLAG_PUBLIC,
+            $invokeImpl
+        );
+        
+        return $mg;
+    }
+    
+    /**
+     * Generate and retrieve setter method for event manager
+     * 
+     * @param ReflectionClass $reflectionClass
+     * @return \Zend\Code\Generator\MethodGenerator
+     */
+    protected function generateEventManagerSetter(ReflectionClass $reflectionClass)
+    {
+        return new MethodGenerator(
+            'setEventManager',
+            [new ParameterGenerator('eventManager', '\Zend\EventManager\EventManagerInterface')],
+            MethodGenerator::FLAG_PUBLIC,
+            '$this->__eventManager = $eventManager;' . "\n"
+        );
+    }
+    
+    /**
+     * Generate and retrieve getter method for event manager
+     * 
+     * @param ReflectionClass $reflectionClass
+     * @return \Zend\Code\Generator\MethodGenerator
+     */
+    protected function generateEventManagerGetter(ReflectionClass $reflectionClass)
+    {
+        return new MethodGenerator(
+            'getEventManager',
+            array(),
+            MethodGenerator::FLAG_PUBLIC,
+            'if (!$this->__eventManager) {' . "\n" .
+            '    $this->__eventManager = new \Zend\EventManager\EventManager();' . "\n" .
+            '}' . "\n" .
+            'return $this->__eventManager;' . "\n"
+        );
+    }
+    
+    /**
+     * Generate and retrieve service methods
+     * 
+     * @return array
+     */
+    protected function generateServiceMethods(ReflectionClass $reflectionClass)
+    {
+        $methods            = array();
+        $methodNames        = array();
+        $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
+        $excludePattern     = $this->serviceConfig['exclude_pattern'];
+        
+        $excludedMethods    = array(
+            '__get'    => true,
+            '__set'    => true,
+            '__isset'  => true,
+            '__clone'  => true,
+            '__sleep'  => true,
+            '__wakeup' => true,
+            '__invoke' => true,
+        );
+        
+        foreach ($reflectionMethods as $method) {
+        
+            $name = $method->getName();
+        
+            if (
+                    $method->isConstructor()
+                    || isset($methodNames[$name])
+                    || isset($excludedMethods[strtolower($name)])
+                    || (substr($name, 0, 2) == '__')
+                    || $method->isFinal()
+                    || $method->isStatic()
+            ) {
+                continue;
+            }
+        
+            $methodNames[$name] = true;
+            $argumentString     = '';
+            $firstParam         = true;
+            $parameters         = array();
+            $eventConfig        = $this->getOperationConfig($name, 'events');
+            $preEventExists     = false;
+            $postEventExists    = false;
+            
+            if ($eventConfig) {
+                foreach ($eventConfig as $specs) {
+                    if ($specs['type'] == self::EVENT_PRE) {
+                        $preEventExists = true;
+                    } elseif ($specs['type'] == self::EVENT_POST) {
+                        $postEventExists = true;
+                    }
+                }
+            }
             
             foreach ($method->getParameters() as $key => $param) {
+        
                 if ($firstParam) {
                     $firstParam = false;
                 } else {
-                    $parameterString .= ', ';
                     $argumentString  .= ', ';
                 }
-
+        
+                if ($preEventExists) {
+                    $argumentString  .= '$__event_params["' . $param->getName().'"]';
+                } else {
+                    $argumentString  .= '$' . $param->getName();
+                }
+                
                 $paramClass = $param->getClass();
 
                 // We need to pick the type hint class too
                 if (null !== $paramClass) {
-                    $parameterString .= '\\' . $paramClass->getName() . ' ';
+                    $parameterType = '\\' . $paramClass->getName();
                 } elseif ($param->isArray()) {
-                    $parameterString .= 'array ';
+                    $parameterType = 'array';
+                } else {
+                    $parameterType = null;
                 }
-
+        
+                $parameter = new ParameterGenerator($param->getName(), $parameterType);
+        
+                if ($param->isDefaultValueAvailable()) {
+                    $parameter->setDefaultValue($param->getDefaultValue());
+                }
+        
                 if ($param->isPassedByReference()) {
-                    $parameterString .= '&';
+                    $parameter->setPassedByReference(true);
                 }
-
-                $paramNames[]     = $param->getName();
-                $parameters[]     = '$' . $param->getName();
-                $parameterString .= '$' . $param->getName();
-                $argumentString  .= '$' . $param->getName();
-
-                if ($param->isDefaultValueAvailable()) {
-                    $defaultValue = var_export($param->getDefaultValue(), true);
-                    $parameterString .= ' = ' . $defaultValue;
-                } else {
-                    $defaultValue = 'null';
-                }
+        
+                $parameters[$param->getName()] = $parameter;
             }
-
-            $methods .= $parameterString . ')';
-            $methods .= "\n" . '    {' . "\n";
-            $methods .= $this->generateEventCode($name, $paramNames, self::EVENT_PRE);
-            $methods .= "\n        \$result = parent::" . $name . '(' . $argumentString . ');' . "\n";
-            $methods .= $this->generateEventCode($name, $paramNames, self::EVENT_POST);
-            $methods .= "\n" . '    }' . "\n";
-        }
-        
-        // Loop through all PUBLIC methods this time to generate invoke mapping
-        $reflectionMethods  = $class->getReflectionClass()->getMethods(\ReflectionMethod::IS_PUBLIC);
-        foreach ($reflectionMethods as $method) {
             
-            $name = $method->getName();
-            $invokeParams[$name] = ['assoc' => [], 'numeric' => []];
+            $cb     = "\$this->__wrappedObject->" . $name . '(' . $argumentString . ');';
+            $source = '';
             
-            foreach ($method->getParameters() as $key => $param) {
-                if ($param->isDefaultValueAvailable()) {
-                    $defaultValue = var_export($param->getDefaultValue(), true);
-                } else {
-                    $defaultValue = 'null';
-                }
-                
-                $invokeParams[$name]['assoc'][] = '$command->getParam("'.$param.'", '.$defaultValue.')';
-                $invokeParams[$name]['numeric'][] = '$command->getParam("'.$key.'", '.$defaultValue.')';
+            if ($preEventExists) {
+                $source .= $this->generateTriggerEventCode($name, array_keys($parameters), self::EVENT_PRE);
             }
-        }
-        
-        $invokeImpl = <<<'EOT'
-    /**
-     * @param  \ValoSo\Command\CommandInterface $command Command to execute
-     * @return mixed
-     */
-    public function __invoke(\ValoSo\Command\CommandInterface $command)
-    {
-
-EOT;
-        
-        $invokeImpl .= 
-        '        if (!in_array($command->getOperation(), ["' . implode('","', array_keys($methodNames)) . '"]))'. "\n" .
-       "        {\n".
-       '            throw new \ValuSo\Exception\OperationNotFoundException(' . "\n" .
-       '                sprintf("Service \'%s\' doesn\'t provide operation \'%s\'", $command->getServiceId(), $command->getOperation()));'. "\n" .
-       '        }' . "\n\n";
-        
-        $invokeImpl .= '        $isAssoc = !$command->hasParam(0);' . "\n";
-        $invokeImpl .= '        switch ($command->getOperation) {' . "\n";
-        
-        foreach ($invokeParams as $methodName => $params) {
-            $invokeImpl .= '            case "'.$methodName.'":' . "\n";
             
-            if (!sizeof($params['assoc'])) {
-                $invokeImpl .= '                return $this->' . $methodName . "();\n";
+            if ($postEventExists) {
+                $source .= "\$response = " . $cb . "\n\n";
+                $source .= $this->generateTriggerEventCode($name, array_keys($parameters), self::EVENT_POST, $preEventExists);
+                $source .= "return \$response;\n";
             } else {
-                    
-                $invokeImpl .= '                if ($isAssoc) {' . "\n"
-                            .  '                return $this->' . $methodName . '(' . implode(', ', $params['assoc']) . ");\n"
-                            .  '                } else {' . "\n"
-                            .  '                return $this->' . $methodName . '(' . implode(', ', $params['numeric']) . ");\n"
-                            .  '                }' . "\n";
+                $source .= "return " . $cb . "\n";
             }
-            
-            $invokeImpl .= '                break;' . "\n";
+        
+            $methods[] = new MethodGenerator($name, $parameters, MethodGenerator::FLAG_PUBLIC, $source);
         }
         
-        $invokeImpl .= "        }\n"; // end switch
-        $invokeImpl .= "    }\n"; // end __invoke
-        
-        $methods .= "\n\n" . $invokeImpl;
-
         return $methods;
     }
     
-    protected function getOperationConfig($name)
+    /**
+     * Generate __operationNotFound method
+     *
+     * @param ReflectionClass $reflectionClass
+     * @return \Zend\Code\Generator\MethodGenerator
+     */
+    protected function generateOperationNotFound(ReflectionClass $reflectionClass)
     {
-        return isset($this->serviceConfig['operations'][$name])
-            ? $this->serviceConfig['operations'][$name] : null;
+        return new MethodGenerator(
+            '__operationNotFound',
+            [new ParameterGenerator('command', '\ValuSo\Command\CommandInterface')],
+            MethodGenerator::FLAG_PRIVATE,
+            'throw new \ValuSo\Exception\OperationNotFoundException(' . "\n" .
+            '    sprintf("Service \'%s\' doesn\'t provide operation \'%s\'", $command->getService(), $command->getOperation()));'. "\n"
+        );
     }
     
-    protected function generateEventCode($operationName, $params, $type)
+    /**
+     * Generate __matchContext method
+     * 
+     * @param ReflectionClass $reflectionClass
+     * @return \Zend\Code\Generator\MethodGenerator
+     */
+    protected function generateMatchContext(ReflectionClass $reflectionClass)
     {
-        $config = $this->getOperationConfig($operationName);
-        $code = '';
+        return new MethodGenerator(
+            '__matchContext',
+            [new ParameterGenerator('command', '\ValuSo\Command\CommandInterface'), 'contexts'],
+            MethodGenerator::FLAG_PRIVATE,
+            'foreach($contexts as $context) { '. "\n" .
+            '    if ($context === $command->getContext()) {'. "\n" .
+            '        return true;'. "\n" .
+            '    } elseif(substr($context, -1) == "*" && strpos($command->getContext(), substr($context,0,-1)) === 0) {'. "\n" .
+            '        return true;'. "\n" .
+            "    }\n" .
+            "}\n" . 
+            "return false;"
+        );
+    }
+    
+    /**
+     * Get configurations for named operation
+     * 
+     * @param string $name
+     * @return array|null
+     */
+    protected function getOperationConfig($name, $param = null, $default = null)
+    {
+        $config = isset($this->serviceConfig['operations'][$name])
+            ? $this->serviceConfig['operations'][$name] : null;
         
-        if (!empty($config['events'])) {
-            foreach ($config['events'] as $specs) {
+        if ($param === null || $config === null) {
+            return $config;
+        } else {
+            return isset($config[$param]) ? $config[$param] : $default;
+        }
+    }
+    
+    /**
+     * Generate event trigger code
+     * 
+     * @param string $operationName
+     * @param array $params
+     * @param string $type
+     * @return string|NULL
+     */
+    protected function generateTriggerEventCode($operationName, $params, $type, $paramsExist = false)
+    {
+        $config   = $this->getOperationConfig($operationName, 'events', array());
+        $code     = '';
+        $service  = strtolower($this->serviceConfig['name']);
+        $responseInjected = false;
+        
+        if (!empty($config)) {
+            foreach ($config as $specs) {
                 if ($specs['type'] === $type) {
                     
                     if (is_string($specs['args'])) {
@@ -245,25 +479,37 @@ EOT;
                     }
                     
                     if (!$specs['name']) {
-                        $specs['name'] = $type . '.' . $this->serviceConfig['name'] . '.' . $operationName; 
+                        $specs['name'] = $type . '.' . $service . '.' . $operationName; 
                     }
                     
-                    $code .= '        $__event_params = new ArrayObject();' . "\n";
+                    $specs['name'] = str_replace('<service>', $service, strtolower($specs['name']));
                     
-                    foreach ($params as $name) {
-                        if ($specs['args'] === null || in_array($name, $specs['args'])) {
-                            $code .= '        $__event_params["'.$name.'"] = $'.$name.';' . "\n";
+                    $code .= '// Trigger "'.$type.'" event' . "\n";
+                    
+                    if (!$paramsExist) {
+                        $code .= '$__event_params = new \ArrayObject();' . "\n";
+                        
+                        foreach ($params as $name) {
+                            if ($specs['args'] === null || in_array($name, $specs['args'])) {
+                                $code .= '$__event_params["'.$name.'"] = $'.$name.';' . "\n";
+                            }
                         }
+                        
+                        $paramsExist = true;
                     }
                     
-                    $code .= '        $this->getEventManager()->trigger("'.$specs['name'].'", $this, $__event_params);' . "\n";
-                    $code .= '        unset($__event_params);' . "\n";
+                    if ($type == self::EVENT_POST && !$responseInjected) {
+                        $code .= '$__event_params["__response"] = $response;' . "\n";
+                        $responseInjected = true;
+                    }
+                    
+                    $code .= '$this->getEventManager()->trigger("'.$specs['name'].'", $this, $__event_params);' . "\n";
                 }
             }
             
             return $code;
         } else {
-            return null;
+            return '';
         }
     }
 }
