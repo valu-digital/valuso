@@ -5,8 +5,8 @@ use	SplObjectStorage;
 use Traversable;
 use	ValuSo\Exception;
 use	ValuSo\Feature;
-use ValuSo\Invoker\DefinitionBased;
 use ValuSo\Command\CommandManager;
+use Zend\Cache\StorageFactory;
 use Zend\Cache\Storage\StorageInterface;
 use	Zend\Loader\PluginClassLoader;
 use Zend\EventManager\EventManagerInterface;
@@ -25,33 +25,18 @@ class ServiceLoader{
 	private $services;
 	
 	/**
-	 * Array that maps service IDs to
-	 * corresponding service names
-	 * 
-	 * @var array
-	 */
-	private $serviceNames;
-	
-	/**
-	 * Contains un-attached service IDs
-	 * 
-	 * @var array
-	 */
-	private $unAttached;
-	
-	/**
 	 * Service plugin manager
 	 * 
 	 * @var \Valu\Service\ServicePluginManager
 	 */
 	private $servicePluginManager = null;
-
+	
 	/**
-	 * Invoker
-	 * 
-	 * @var InvokerInterface
+	 * Command manager
+	 *
+	 * @var CommandManager
 	 */
-	private $invoker;
+	private $commandManager;
 	
 	/**
 	 * Cache adapter
@@ -77,7 +62,6 @@ class ServiceLoader{
 	public function __construct($options = null)
 	{
 		$this->services = array();
-		$this->serviceNames = array();
 		
 		if(null !== $options){
 			$this->setOptions($options);
@@ -182,6 +166,21 @@ class ServiceLoader{
 	}
 	
 	/**
+	 * Retrieve command manager
+	 *
+	 * @return \ValuSo\Command\CommandManager
+	 */
+	public function getCommandManager()
+	{
+	    if ($this->commandManager === null) {
+	        $this->commandManager = new CommandManager();
+	        $this->commandManager->setServiceLoader($this);
+	    }
+	     
+	    return $this->commandManager;
+	}
+	
+	/**
 	 * Batch register services
 	 * 
 	 * @param array|\Traversable $services
@@ -202,12 +201,6 @@ class ServiceLoader{
 		    
 		    if (is_string($impl)) {
 		        $impl = ['name' => $impl];
-		    }
-		    
-		    $enabled = isset($impl['enabled']) ? $impl['enabled'] : true;
-		    
-		    if (!$enabled){
-		        continue;
 		    }
 		    
 			$id 		= isset($impl['id']) ? $impl['id'] : $key;
@@ -231,6 +224,10 @@ class ServiceLoader{
 			
 			$this->registerService($id, $name, $service, $options, $priority);
 			
+			if (array_key_exists('enabled', $impl) && !$impl['enabled']) {
+			    $this->disableService($id);
+			}
+			
 			if($factory){
 			    $this->getServicePluginManager()->setFactory($id, $factory);
 			}
@@ -251,7 +248,8 @@ class ServiceLoader{
 	 */
 	public function registerService($id, $name, $service = null, $options = array(), $priority = 1)
 	{
-	    $name = $this->normalizeService($name);
+	    $name = $this->normalizeServiceName($name);
+	    $id = $this->normalizeServiceId($id);
 	    
 	    if (!preg_match($this->validIdPattern, $id)) {
 	        throw new Exception\InvalidServiceException(sprintf(
@@ -263,23 +261,11 @@ class ServiceLoader{
                 "Service name '%s' is not valid", $name));
 	    }
 	    
-	    if(!isset($this->services[$name])){
-	        $this->services[$name] = array();
-	    }
-	    
-		$this->services[$name][$id] = array(
+		$this->services[$id] = array(
+	        'name' => $name,
 			'options' => $options,
 			'priority' => $priority
 		);
-		
-		$this->serviceNames[$id] = $name;
-		
-		// Mark service un-attached
-		if(!isset($this->unAttached[$name])){
-		    $this->unAttached[$name] = array();
-		}
-		
-		$this->unAttached[$name][] = $id;
 		
 		// Register as invokable
 		if(is_string($service)){
@@ -291,7 +277,58 @@ class ServiceLoader{
 		    $this->getServicePluginManager()->setService($id, $service);
 		}
 		
+		// Attach to command manager
+		$this->services[$id]['listener'] = $this->getCommandManager()->attach($name, $id, $priority);
+		
 		return $this;
+	}
+	
+	/**
+	 * Enable service
+	 * 
+	 * @param string $id
+	 * @return boolean
+	 */
+	public function enableService($id)
+	{
+	    if(!isset($this->services[$id])){
+	        throw new Exception\ServiceNotFoundException(
+                sprintf('Service ID "%s" does not exist', $id)
+	        );
+	    }
+	    
+	    if (!isset($this->services[$id]['listener'])) {
+	        $this->services[$id]['listener'] = $this->getCommandManager()->attach(
+                $this->services[$id]['name'], $id, $this->services[$id]['priority']);
+	        
+	        return true;
+	    } else {
+	        return false;
+	    }
+	}
+	
+	/**
+	 * Disable service
+	 *
+	 * @param string $id
+	 * @return boolean
+	 */
+	public function disableService($id)
+	{
+	    if(!isset($this->services[$id])){
+	        throw new Exception\ServiceNotFoundException(
+                sprintf('Service ID "%s" does not exist', $id)
+	        );
+	    }
+	    
+	    if (isset($this->services[$id]['listener'])) {
+	        $return = $this->getCommandManager()->detach($this->services[$this->services[$id]['name']][$id]['listener']);
+	        $this->services[$id]['listener'] = null;
+	        
+	        return $return;
+	    } else {
+	        return false;
+	    }
 	}
 	
 	/**
@@ -303,76 +340,33 @@ class ServiceLoader{
 	 */
 	public function load($id, $options = null)
 	{
-	    $name = isset($this->serviceNames[$id])
-	        ? $this->serviceNames[$id]
-	        : null;
+	    $id = $this->normalizeServiceId($id);
 	    
-	    if(!$name){
+	    if(!isset($this->services[$id])){
 	        throw new Exception\ServiceNotFoundException(
                 sprintf('Service ID "%s" does not exist', $id)
-            );
-	    }
-	    
-	    try{
-	        /**
-	         * Load pre-configured options
-	         */
-	        if($options == null){
-	            $options = $this->services[$name][$id]['options'];
-	        }
-	        
-	        $instance = $this->getServicePluginManager()->get($id, $options);
-	        return $instance;
-	    }
-	    catch(\Zend\Loader\Exception\RuntimeException $e){
-	        throw new Exception\InvalidServiceException(
-	            sprintf('Service implementation "%s" is not a valid. Maybe the class doesn\'t implement ServiceInterface interface.', $id)
 	        );
 	    }
+	    
+        if($options == null){
+            $options = $this->services[$id]['options'];
+        }
+        
+        return $this->getServicePluginManager()->get($id, $options);
 	}
 
 	/**
 	 * Test if a service exists
 	 * 
+	 * Any services that are currently disabled, are not
+	 * taken into account.
+	 * 
 	 * @param string $name
 	 */
 	public function exists($name)
 	{
-	    $name = $this->normalizeService($name);
-	    
-	    return  isset($this->services[$name]) && 
-	            sizeof($this->services[$name]);
-	}
-
-	/**
-	 * Attach listeners to event manager by service name
-	 * 
-	 * This method should not be called outside Broker.
-	 * 
-	 * @param CommandManager $commandManager
-	 * @param string $name Name of the service
-	 */
-	public function attachListeners(CommandManager $commandManager, $name)
-	{
-	    $normalName = $this->normalizeService($name);
-	    
-	    if( !isset($this->services[$normalName]) || 
-            !sizeof($this->services[$normalName]) ||
-	        !sizeof($this->unAttached[$normalName])){
-	        
-	        return;
-	    }
-	    
-	    // Attach all that have not been attached
-	    foreach($this->unAttached[$normalName] as $id){
-            $commandManager->attach(
-                $name, 
-                $this->load($id), 
-                $this->services[$normalName][$id]['priority']
-            );
-	    }
-	    
-	    $this->unAttached[$normalName] = array();
+	    $name = $this->normalizeServiceName($name);
+	    return $this->getCommandManager()->hasListeners($name);
 	}
 	
 	/**
@@ -382,6 +376,10 @@ class ServiceLoader{
 	 */
 	public function getCache()
 	{
+	    if (!$this->cache) {
+	        $this->setCache(StorageFactory::factory(['adapter' => 'memory']));
+	    }
+	    
 	    return $this->cache;
 	}
 	
@@ -398,29 +396,23 @@ class ServiceLoader{
 	}
 	
 	/**
-	 * Get definition based invoker
-	 * 
-	 * @return InvokerInterface
-	 */
-	protected function getInvoker()
-	{
-	    if($this->invoker == null){
-	        $this->invoker = new DefinitionBased(
-	            $this->getCache()        
-            );
-	    }
-	    
-	    return $this->invoker;
-	}
-	
-	/**
 	 * Retrieve service name in normal form
 	 * 
 	 * @param string $name
 	 * @return string
 	 */
-    public final function normalizeService($name){
+    public final function normalizeServiceName($name){
 	    return strtolower($name);
+	}
+	
+	/**
+	 * Retrieve service ID in normal form
+	 *
+	 * @param string $id
+	 * @return string
+	 */
+	public final function normalizeServiceId($id){
+	    return strtolower($id);
 	}
 	
 	/**
@@ -432,7 +424,7 @@ class ServiceLoader{
 	{
 	    if($this->servicePluginManager === null){
 	        $this->servicePluginManager = new ServicePluginManager();
-	        $this->servicePluginManager->setInvoker($this->getInvoker());
+	        $this->servicePluginManager->setCache($this->getCache());
 	         
 	        $that = $this;
 	
@@ -448,15 +440,6 @@ class ServiceLoader{
 	               $instance instanceof Feature\ConfigurableInterface){
 	
 	                $instance->setConfig($options);
-	            }
-	             
-	            /**
-	             * Provide shared invoker instance
-	             */
-	            if($instance instanceof Feature\InvokerAwareInterface &&
-	               $instance instanceof Feature\DefinitionProviderInterface){
-	
-	                $instance->setInvoker($that->getInvoker());
 	            }
 	        });
 	    }
