@@ -192,6 +192,11 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
                 'name' => 'test', 
                 'service' => new ClosureService(function(){return 'service2';}),
                 'priority' => 1000, // Execute first
+            ],
+            'service3' => [
+                'name' => 'test',
+                'service' => self::CLOSURE_SERVICE_CLASS,
+                'enabled' => false
             ]
         ];
         
@@ -218,15 +223,45 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         $this->assertSame($c, $this->serviceLoader->load('testid'));
     }
     
-    /**
-     * @expectedException ValuSo\Exception\ServiceNotFoundException
-     */
-    public function testLoadIsCaseSensitive()
+    public function testLoadIsCaseInSensitive()
     {
         $c = new ClosureService();
         $this->serviceLoader->registerService('testid', 'testservice', $c);
         
-        $this->serviceLoader->load('Testid');
+        // Does not cause an exception
+        $this->assertSame($c, $this->serviceLoader->load('Testid'));
+    }
+    
+    public function testDisableEnableService()
+    {
+        $c = new ClosureService();
+        $this->serviceLoader->registerService('testid', 'testservice', $c);
+        
+        $this->assertTrue($this->serviceLoader->disableService('testid'));
+        
+        $cmd = new Command('testservice');
+        $responses = $this->serviceLoader->getCommandManager()->trigger($cmd);
+        $this->assertTrue($responses->isEmpty());
+        
+        $this->assertTrue($this->serviceLoader->enableService('testid'));
+        $responses = $this->serviceLoader->getCommandManager()->trigger($cmd);
+        $this->assertFalse($responses->isEmpty());
+    }
+    
+    public function testEnableAlreadyEnabled()
+    {
+        $c = new ClosureService();
+        $this->serviceLoader->registerService('testid', 'testservice', $c);
+        $this->assertFalse($this->serviceLoader->enableService('testid'));
+    }
+    
+    public function testDisableAlreadyDisabled()
+    {
+        $c = new ClosureService();
+        $this->serviceLoader->registerService('testid', 'testservice', $c);
+        $this->serviceLoader->disableService('testid');
+        
+        $this->assertFalse($this->serviceLoader->disableService('testid'));
     }
 
     public function testExists()

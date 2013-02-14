@@ -322,7 +322,7 @@ class ServiceLoader{
 	    }
 	    
 	    if (isset($this->services[$id]['listener'])) {
-	        $return = $this->getCommandManager()->detach($this->services[$this->services[$id]['name']][$id]['listener']);
+	        $return = $this->getCommandManager()->detach($this->services[$id]['listener']);
 	        $this->services[$id]['listener'] = null;
 	        
 	        return $return;
