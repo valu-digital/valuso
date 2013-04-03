@@ -20,4 +20,33 @@ class Trigger extends AbstractArrayOrStringAnnotation
     {
         return $this->value;
     }
+    
+    /**
+     * Retrieve event description
+     * 
+     * Event description is an array that contains following keys:
+     * - type (event type, which is either 'pre' or 'post')
+     * - name (name of the event)
+     * - args (event arguments)
+     * 
+     * @return array
+     */
+    public function getEventDescription()
+    {
+        $event = array(
+            'type' => null,
+            'name' => null,
+            'args' => null
+        );
+        
+        if (is_string($this->value)) {
+            $event['type'] = $this->value;
+        } else {
+            $event['type'] = isset($this->value['type']) ? $this->value['type'] : null;
+            $event['name'] = isset($this->value['name']) ? $this->value['name'] : null;
+            $event['args'] = isset($this->value['args']) ? $this->value['args'] : null;
+        }
+        
+        return $event;
+    }
 }
