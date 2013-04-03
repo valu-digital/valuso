@@ -57,6 +57,7 @@ class TestService extends AbstractService implements ProxyAwareInterface
     
     /**
      * @Annotation\Trigger("post");
+     * @Annotation\Alias("save");
      */
     public function update($query, array $specs = array())
     {
