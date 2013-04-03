@@ -2,9 +2,7 @@
 namespace ValuSoTest\Broker;
 
 use ValuSoTest\TestAsset\TestService;
-
 use ValuSoTest\TestAsset\ClosureService;
-
 use ValuSo\Broker\ServicePluginManager;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Cache\StorageFactory;
