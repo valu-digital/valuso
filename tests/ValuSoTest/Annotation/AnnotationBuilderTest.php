@@ -68,7 +68,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
             ['events' => [
                 ['type' => 'pre', 'name' => null, 'args' => null],    
                 ['type' => 'post', 'name' => 'post.<service>.run', 'args' => ['job', 'delayed']],   
-            ], 'context' => '*'],
+            ], 'context' => '*', 'aliases' => []],
             $specs['operations']['run']->getArrayCopy()
         );
     }
@@ -100,7 +100,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
         $this->assertInstanceOf('\ArrayObject', $specs['operations']['getInternal']);
         
         $this->assertEquals(
-            ['context' => '*', 'events' => []],
+            ['context' => '*', 'events' => [], 'aliases' => []],
             $specs['operations']['getInternal']->getArrayCopy()
         );
     }
@@ -171,30 +171,6 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
         );
     }
     
-    public function testContextAwareOperation()
-    {
-        $service = new TestService();
-        $specs = $this->annotationBuilder->getServiceSpecification($service);
-        
-        $this->assertArrayHasKey('operations', $specs);
-        
-        $this->assertEquals(
-            'http-post',
-            $specs['operations']['postOperation']['context']);
-    }
-    
-    public function testMultiContextAwareOperation()
-    {
-        $service = new TestService();
-        $specs = $this->annotationBuilder->getServiceSpecification($service);
-    
-        $this->assertArrayHasKey('operations', $specs);
-    
-        $this->assertEquals(
-            ['http*', 'native'],
-            $specs['operations']['httpOperation']['context']);
-    }
-
     private function getArrayCopyDeep(ArrayObject $array)
     {
         $array = $array->getArrayCopy();
