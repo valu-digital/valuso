@@ -166,8 +166,9 @@ class ServiceProxyGenerator
      */
     protected function generateInvoker(ReflectionClass $reflectionClass)
     {
-        $invokeParams       = array();
+        $invokeSpecs        = array();
         $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
+        $methodAliases      = array();
         
         // Loop through all PUBLIC methods this time to generate invoke mapping
         foreach ($reflectionMethods as $method) {
@@ -179,7 +180,10 @@ class ServiceProxyGenerator
                 continue;
             }
             
-            $invokeParams[$name] = ['assoc' => [], 'numeric' => []];
+            $aliases = $this->getOperationConfig($name, 'aliases');
+            $aliases[] = $name;
+            
+            $invokeSpecs[$name] = ['assoc' => [], 'numeric' => [], 'aliases' => $aliases];
         
             $index = 0;
             foreach ($method->getParameters() as $param) {
@@ -189,43 +193,54 @@ class ServiceProxyGenerator
                     $defaultValue = 'null';
                 }
         
-                $invokeParams[$name]['assoc'][] = '$command->getParam("'.$param->getName().'", '.$defaultValue.')';
-                $invokeParams[$name]['numeric'][] = '$command->getParam('.$index.', '.$defaultValue.')';
+                $invokeSpecs[$name]['assoc'][] = '$command->getParam("'.$param->getName().'", '.$defaultValue.')';
+                $invokeSpecs[$name]['numeric'][] = '$command->getParam('.$index.', '.$defaultValue.')';
                 
                 $index++;
             }
+            
+            $methodAliases = array_merge($methodAliases, $aliases);
         }
         
         // Define body for __invoke
         $invokeImpl =
-        'if (!in_array($command->getOperation(), ["' . implode('","', array_keys($invokeParams)) . '"]))'. "\n" .
+        'if (!in_array($command->getOperation(), ["' . implode('","', $methodAliases) . '"]))'. "\n" .
         "{\n".
         '    $this->__operationNotFound($command);' . "\n" .
         '}' . "\n\n";
         
         $invokeImpl .= '$isAssoc = !$command->hasParam(0);' . "\n";
-        $invokeImpl .= 'switch ($command->getOperation) {' . "\n";
+        $invokeImpl .= 'switch ($command->getOperation()) {' . "\n";
         
-        foreach ($invokeParams as $methodName => $params) {
-            $invokeImpl .= '    case "'.$methodName.'":' . "\n";
-            $context     = $this->getOperationConfig($methodName, 'context', '*');
+        foreach ($invokeSpecs as $methodName => $specs) {
+            
+            // Generate case statement for each alias, including the real
+            // method name
+            foreach ($specs['aliases'] as $methodNameOrAlias) {
+                $invokeImpl .= '    case "'.$methodNameOrAlias.'":' . "\n";
+            }
+            
+            // Generate code for context testing
+            $context = $this->getOperationConfig($methodName, 'context', '*');
             
             if ($context !== '*') {
                 $contexts = (array) $context;
                 
-                $invokeImpl .= '        if(!$this->__matchContext($command->getContext(), array("'.implode('","', $contexts).'"))) {' . "\n"
-                             . '            $this->__operationNotFound($command);' . "\n"
+                $invokeImpl .= '        if(!$this->__matchContext($command, array("'.implode('","', $contexts).'"))) {' . "\n"
+                             . '            throw new \ValuSo\Exception\UnsupportedContextException(' . "\n"
+                             . '                sprintf("Operation \'%s\' doesn\'t support context \'%s\'", $command->getOperation(), $command->getContext()));'. "\n"
                              . '        }' . "\n";
             }
         
-            if (!sizeof($params['assoc'])) {
+            // Generate invokation code 
+            if (!sizeof($specs['assoc'])) {
                 $invokeImpl .= '        return $this->' . $methodName . "();\n";
             } else {
         
                 $invokeImpl .= '        if ($isAssoc) {' . "\n"
-                            .  '            return $this->' . $methodName . '(' . implode(', ', $params['assoc']) . ");\n"
+                            .  '            return $this->' . $methodName . '(' . implode(', ', $specs['assoc']) . ");\n"
                             .  '        } else {' . "\n"
-                            .  '            return $this->' . $methodName . '(' . implode(', ', $params['numeric']) . ");\n"
+                            .  '            return $this->' . $methodName . '(' . implode(', ', $specs['numeric']) . ");\n"
                             .  '        }' . "\n";
             }
         
