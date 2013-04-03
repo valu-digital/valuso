@@ -30,6 +30,7 @@ class AnnotationBuilder
         'Trigger',
         'Inherit',
         'Context',
+        'Alias',
     );
     
     /**
@@ -160,7 +161,8 @@ class AnnotationBuilder
     {
         $operation = new ArrayObject(array(
             'events' => array(), 
-            'context' => '*')
+            'context' => '*',
+            'aliases' => [])
         );
         
         $excludePattern = $serviceSpec['exclude_pattern'];
@@ -193,25 +195,11 @@ class AnnotationBuilder
         foreach ($annotations as $annotation) {
 
             if ($annotation instanceof Trigger) {
-                $specs = $annotation->getTrigger();
-                
-                $event = array(
-                    'type' => null,        
-                    'name' => null,
-                    'args' => null  
-                );
-                
-                if (is_string($specs)) {
-                    $event['type'] = $specs;
-                } else {
-                    $event['type'] = isset($specs['type']) ? $specs['type'] : null;
-                    $event['name'] = isset($specs['name']) ? $specs['name'] : null;
-                    $event['args'] = isset($specs['args']) ? $specs['args'] : null;
-                }
-                
-                $operation['events'][] = $event;
+                $operation['events'][] = $annotation->getEventDescription();
             } elseif ($annotation instanceof Context) {
                 $operation['context'] = $annotation->getContext();
+            } elseif ($annotation instanceof Alias) {
+                $operation['aliases'][] = $annotation->getAlias();
             }
         }
         
