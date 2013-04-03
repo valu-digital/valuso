@@ -2,7 +2,7 @@
 namespace ValuSo\Annotation;
 
 /**
- * Name annotation
+ * Version annotation
  *
  * Use this annotation to specify service version.
  *
