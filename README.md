@@ -1,4 +1,4 @@
-valuso
+ValuSo
 ======
 
-Service layer for Zend Framework 2
+ValuSo is a Zend Framework 2 module for service oriented application architecture.
