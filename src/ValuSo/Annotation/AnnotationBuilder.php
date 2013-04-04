@@ -78,7 +78,7 @@ class AnnotationBuilder
         }
         
         // Each class must define its own exclusion pattern
-        $serviceSpec['exclude_pattern'] = null;
+        $serviceSpec['exclude_patterns'] = array();
         
         if ($annotations instanceof AnnotationCollection) {
             $this->configureService($annotations, $class, $serviceSpec);
@@ -86,10 +86,12 @@ class AnnotationBuilder
         
         foreach ($class->getMethods() as $method) {
             $annotations = $method->getAnnotations($annotationManager);
-        
-            if ($annotations instanceof AnnotationCollection) {
-                $this->configureOperation($annotations, $method, $serviceSpec, $operationSpec);
+            
+            if (!$annotations instanceof AnnotationCollection) {
+                $annotations = new AnnotationCollection();
             }
+        
+            $this->configureOperation($annotations, $method, $serviceSpec, $operationSpec);
         }
     }
     
@@ -142,7 +144,7 @@ class AnnotationBuilder
             if ($annotation instanceof Version) {
                 $serviceSpec['version'] = $annotation->getVersion();
             } elseif ($annotation instanceof ExcludePattern) {
-                $serviceSpec['exclude_pattern'] = $annotation->getExcludePattern();
+                $serviceSpec['exclude_patterns'] = $annotation->getExcludePattern();
             }
         }
     }
@@ -165,7 +167,7 @@ class AnnotationBuilder
             'aliases' => [])
         );
         
-        $excludePattern = $serviceSpec['exclude_pattern'];
+        $excludePatterns = (array) $serviceSpec['exclude_patterns'];
         $exclude = null;
         
         foreach ($annotations as $annotation) {
@@ -183,8 +185,13 @@ class AnnotationBuilder
         }
         
         // Fallback: class level exclusion pattern
-        if ($exclude === null && $excludePattern && preg_match($excludePattern, $method->getName())) {
-            $exclude = true;
+        if ($exclude === null && sizeof($excludePatterns)) {
+            foreach ($excludePatterns as $excludePattern) {
+               if (preg_match($excludePattern, $method->getName())) {
+                   $exclude = true;
+                   break;
+               }
+            }
         }
         
         // Skip this method, if excluded
@@ -197,9 +204,9 @@ class AnnotationBuilder
             if ($annotation instanceof Trigger) {
                 $operation['events'][] = $annotation->getEventDescription();
             } elseif ($annotation instanceof Context) {
-                $operation['context'] = $annotation->getContext();
+                $operation['contexts'] = $annotation->getContext();
             } elseif ($annotation instanceof Alias) {
-                $operation['aliases'][] = $annotation->getAlias();
+                $operation['aliases'] = $annotation->getAlias();
             }
         }
         
