@@ -2,14 +2,22 @@
 namespace ValuSoTest\Annotation;
 
 use ValuSo\Annotation\ExcludePattern;
-
 use PHPUnit_Framework_TestCase;
 
 /**
  * ExcludePattern test case.
  */
-class ExcludePatternTest extends PHPUnit_Framework_TestCase
+class ExcludePatternTest extends AbstractTestCase
 {
+    public function setUp()
+    {
+        parent::setUp();
+    
+        // Register test service
+        $this->serviceBroker->getLoader()->registerService(
+            'test', 'Test.Service', 'ValuSoTest\TestAsset\TestService');
+    }
+    
     public function testConstruct()
     {
         $pattern = '/test/';
@@ -59,6 +67,4 @@ class ExcludePatternTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(0, preg_match($exclude->getExcludePattern(), 'dogetMe'));
         $this->assertEquals(0, preg_match($exclude->getExcludePattern(), 'dosetMe'));
     }
-
 }
-
