@@ -5,14 +5,14 @@ use ValuSo\Exception;
 use Zend\Stdlib\ErrorHandler;
 
 /**
- * Exclude setters annotation
+ * Exclude annotation
  *
  * Presence of this annotation hints to the service proxy 
  * to exclude all methods matching the pattern.
  *
  * @Annotation
  */
-class ExcludePattern extends AbstractStringAnnotation
+class ExcludePattern extends AbstractArrayOrStringAnnotation
 {
     
     const PATTERN_GET = 'get';
@@ -36,18 +36,12 @@ class ExcludePattern extends AbstractStringAnnotation
     {
         parent::__construct($data);
         
-        if (isset($this->patterns[$this->value])) {
-            $this->value = $this->patterns[$this->value];
-        } else {
-            // Test that pattern is a valid REGEXP pattern
-            ErrorHandler::start();
-            $this->pattern = (string) $this->value;
-            $status        = preg_match($this->pattern, "Test");
-            $error         = ErrorHandler::stop();
-            
-            if (false === $status) {
-                throw new Exception\InvalidArgumentException("Internal error parsing the pattern '{$this->value}'", 0, $error);
+        if (is_array($this->value)) {
+            foreach ($this->value as $key => &$value) {
+                $this->filter($value);
             }
+        } else {
+            $this->filter($this->value);
         }
     }
     
@@ -59,5 +53,28 @@ class ExcludePattern extends AbstractStringAnnotation
     public function getExcludePattern()
     {
         return $this->value;
+    }
+    
+    /**
+     * Filter value
+     * 
+     * @param string $value Regexp or name of pattern
+     * @throws Exception\InvalidArgumentException
+     */
+    private function filter(&$value)
+    {
+        if (isset($this->patterns[$value])) {
+            $value = $this->patterns[$value];
+        } else {
+            // Test that pattern is a valid REGEXP pattern
+            ErrorHandler::start();
+            $this->pattern = (string) $value;
+            $status        = preg_match($this->pattern, "Test");
+            $error         = ErrorHandler::stop();
+        
+            if (false === $status) {
+                throw new Exception\InvalidArgumentException("Internal error parsing the pattern '{$this->value}'", 0, $error);
+            }
+        }
     }
 }
