@@ -6,7 +6,7 @@ use Zend\Filter\Boolean as BooleanFilter;
 /**
  * Exclude annotation
  *
- * Presence of this annotation hints to the service proxy 
+ * Presence of this annotation hints the service proxy 
  * to exclude this operation.
  *
  * @Annotation
