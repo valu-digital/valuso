@@ -194,11 +194,8 @@ class ServicePluginManager extends AbstractPluginManager
             
             $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
             $config['name'] = $name; // Overwrite any previously configured name
-            
-            $proxyGenerator->generateProxyClass($instance, $config);
-            require_once $proxyGenerator->getProxyFileName($className);
-        
-            $proxy = new $fqcn($instance);
+
+            $proxy = $proxyGenerator->createProxyClassInstance($instance);
             
             if ($this->cache) {
                 $this->cache->setItem($name, $fqcn);
