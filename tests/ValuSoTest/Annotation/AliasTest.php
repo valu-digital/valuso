@@ -1,6 +1,8 @@
 <?php
 namespace ValuSoTest\Annotation;
 
+use ValuSo\Command\Command;
+
 use ValuSo\Annotation\Alias;
 use ValuSoTest\TestAsset\TestService;
 
@@ -15,16 +17,7 @@ class AliasTest extends AbstractTestCase
      * @var \ValuSo\Annotation\Alias
      */
     private $alias;
-    
-    public function setUp()
-    {
-        parent::setUp();
-        
-        // Register test service
-        $this->serviceBroker->getLoader()->registerService(
-            'test', 'Test.Service', 'ValuSoTest\TestAsset\TestService');
-    }
-    
+
     public function testConstructAndGet()
     {
         $alias = new Alias(['value' => 'operationAlias']);
@@ -37,13 +30,26 @@ class AliasTest extends AbstractTestCase
         $specs = $this->annotationBuilder->getServiceSpecification($service);
     
         $this->assertArrayHasKey('operations', $specs);
-        $this->assertEquals(['save'], $specs['operations']['update']['aliases']);
+        $this->assertEquals('save', $specs['operations']['update']['aliases']);
     }
     
     public function testInvokeUsingAlias()
     {
-        // save is an alias for update
+        // make save as an alias for update
+        $config = [
+            'operations' => [
+                'operation1' => [
+                    'aliases' => ['operationAlias']
+                ]
+            ]
+        ];
+        
+        $serviceProxy = $this->generateProxyService($config);
+        $command = new Command();
+        $command->setOperation('operationAlias');
+        $command->setParam('returnValue', true);
+        
         $this->assertTrue(
-            $this->serviceBroker->service('Test.Service')->save('someitemid'));
+            $serviceProxy->__invoke($command));
     }
 }

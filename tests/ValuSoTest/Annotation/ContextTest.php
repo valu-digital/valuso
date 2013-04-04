@@ -1,6 +1,8 @@
 <?php
 namespace ValuSoTest\Annotation;
 
+use ValuSo\Command\Command;
+
 use ValuSo\Annotation\Context;
 use ValuSoTest\TestAsset\TestService;
 
@@ -16,13 +18,28 @@ class ContextTest extends AbstractTestCase
      */
     private $alias;
     
+    /**
+     * Service proxy instance
+     */
+    private $serviceProxy;
+    
     public function setUp()
     {
         parent::setUp();
         
-        // Register test service
-        $this->serviceBroker->getLoader()->registerService(
-            'test', 'Test.Service', 'ValuSoTest\TestAsset\TestService');
+        $this->serviceProxy = $this->generateProxyService([
+            'operations' => [
+                'operation1' => [
+                    'contexts' => ['native']
+                ],
+                'operation2' => [
+                    'contexts' => ['http-post']
+                ],
+                'operation3' => [
+                    'contexts' => ['http-post', 'http-get']
+                ]
+            ]        
+        ]);
     }
     
     public function testConstructUsingStringAndGet()
@@ -43,27 +60,41 @@ class ContextTest extends AbstractTestCase
         $specs = $this->annotationBuilder->getServiceSpecification($service);
     
         $this->assertArrayHasKey('operations', $specs);
-        $this->assertEquals(['save'], $specs['operations']['update']['aliases']);
+        $this->assertEquals('save', $specs['operations']['update']['aliases']);
     }
     
     public function testInvokeWithDefaultContext()
     {
+        $serviceProxy = $this->generateProxyService();
+        $command = new Command();
+        $command->setOperation('operation1');
+        $command->setParam('returnValue', true);
+        $command->setContext(Command::CONTEXT_NATIVE);
+        
         $this->assertTrue(
-            $this->serviceBroker->service('Test.Service')->update('someitemid'));
+            $serviceProxy->__invoke($command));
     }
     
     public function testInvokeWithCorrectContext()
     {
-        $this->assertEquals(
-            'posted',
-            $this->serviceBroker->service('Test.Service')->context('http-post')->postOperation('someitemid'));
+        $command = new Command();
+        $command->setOperation('operation2');
+        $command->setParam('returnValue', true);
+        $command->setContext('http-post');
+        
+        $this->assertTrue(
+            $this->serviceProxy->__invoke($command));
     }
     
     public function testInvokeWithMultipleSupportedContexts()
     {
-        $this->assertEquals(
-            'done',
-            $this->serviceBroker->service('Test.Service')->context('http-post')->httpOperation('someitemid'));
+        $command = new Command();
+        $command->setOperation('operation3');
+        $command->setParam('returnValue', true);
+        $command->setContext('http-get');
+        
+        $this->assertTrue(
+            $this->serviceProxy->__invoke($command));
     }
     
     /**
@@ -71,8 +102,11 @@ class ContextTest extends AbstractTestCase
      */
     public function testInvokeWithInCorrectContext()
     {
-        $this->assertEquals(
-            'posted',
-            $this->serviceBroker->service('Test.Service')->context('native')->postOperation('someitemid'));
+        $command = new Command();
+        $command->setOperation('operation3');
+        $command->setParam('returnValue', true);
+        $command->setContext('native');
+        
+        $this->serviceProxy->__invoke($command);
     }
 }
