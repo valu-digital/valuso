@@ -1,6 +1,8 @@
 <?php
 namespace ValuSoTest\Annotation;
 
+use ValuSo\Command\Command;
+
 use ValuSo\Annotation\Trigger as TriggerAnnotation;
 use ValuSo\Annotation\AnnotationBuilder;
 use PHPUnit_Framework_TestCase;
@@ -8,7 +10,7 @@ use PHPUnit_Framework_TestCase;
 /**
  * Trigger test case.
  */
-class TriggerTest extends PHPUnit_Framework_TestCase
+class TriggerTest extends AbstractTestCase
 {
 
     /**
@@ -16,7 +18,23 @@ class TriggerTest extends PHPUnit_Framework_TestCase
      * @var AnnotationBuilder
      */
     private $triggerAnnotation;
-
+    
+    public function setUp()
+    {
+        parent::setUp();
+        
+        $this->serviceProxy = $this->generateProxyService([
+            'operations' => [
+                'operation1' => [
+                    'events' => [['type' => 'pre', 'name' => 'preevent', 'args' => null]]
+                ],
+                'operation2' => [
+                    'events' => [['type' => 'post', 'name' => 'postevent', 'args' => null]]
+                ]
+            ]        
+        ]);
+    }
+    
     /**
      * Cleans up the environment after running a test.
      */
@@ -48,5 +66,51 @@ class TriggerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(
                 $specs, 
                 $this->triggerAnnotation->getEventDescription());
+    }
+    
+    /**
+     * Integration test
+     */
+    public function testServiceTriggersPreEvent()
+    {
+        $command = new Command();
+        $command->setOperation('operation1');
+        $command->setParam('returnValue', true);
+        $command->setContext('native');
+        
+        $triggered = false;
+        
+        $events = $this->serviceProxy->getEventManager();
+        $events->attach('*', function($event) use(&$triggered) {
+            if ($event->getName() === 'preevent') {
+                $triggered = true;
+            }
+        });
+        
+        $this->serviceProxy->__invoke($command);
+        $this->assertTrue($triggered);
+    }
+    
+    /**
+     * Integration test
+     */
+    public function testServiceTriggersPostEvent()
+    {
+        $command = new Command();
+        $command->setOperation('operation2');
+        $command->setParam('returnValue', true);
+        $command->setContext('native');
+        
+        $triggered = false;
+        
+        $events = $this->serviceProxy->getEventManager();
+        $events->attach('*', function($event) use(&$triggered) {
+            if ($event->getName() === 'postevent') {
+                $triggered = true;
+            }
+        });
+        
+        $this->serviceProxy->__invoke($command);
+        $this->assertTrue($triggered);
     }
 }
