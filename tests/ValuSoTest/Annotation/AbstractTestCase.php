@@ -65,7 +65,7 @@ abstract class AbstractTestCase extends PHPUnit_Framework_TestCase
         $config['name'] = 'Test.Service';
         
         $config = ArrayUtils::merge($config->getArrayCopy(), $configExtension);
-        $proxyGenerator = new ServiceProxyGenerator();
+        $proxyGenerator = new ServiceProxyGenerator(null, null, uniqid());
         $proxyGenerator->generateProxyClass($class, $config);
         
         $service = new $class();
