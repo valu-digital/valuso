@@ -8,7 +8,7 @@ namespace ValuSo\Annotation;
  *
  * @Annotation
  */
-class Alias extends AbstractStringAnnotation
+class Alias extends AbstractArrayOrStringAnnotation
 {
     /**
      * Retrieve the alias
