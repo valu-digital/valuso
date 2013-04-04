@@ -10,7 +10,7 @@ ini_set('display_errors', 1);
  * This makes our life easier when dealing with paths. Everything is relative
  * to the module root now.
  */
-chdir(realpath(dirname(__DIR__)));
+chdir(realpath(__DIR__));
 
 // Setup autoloading
-include __DIR__ . '/_autoload.php';
+include './_autoload.php';

@@ -1,7 +1,7 @@
 <?php
 if (
     !($loader = @include_once '../autoload.php')
-    && !@($loader = include_once '../../vendor/autoload.php')
+    && !@($loader = include_once '../../../vendor/autoload.php')
 ) {
     throw new RuntimeException('vendor/autoload.php could not be found. Did you run `php composer.phar install`?');
 }
