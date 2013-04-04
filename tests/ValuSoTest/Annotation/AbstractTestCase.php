@@ -1,8 +1,14 @@
 <?php
 namespace ValuSoTest\Annotation;
 
-use ValuSo\Annotation\AnnotationBuilder;
+use Zend\EventManager\EventManager;
+
+use Zend\Stdlib\ArrayUtils;
+
 use ValuSo\Broker\ServiceBroker;
+use ValuSo\Command\Command;
+use ValuSo\Annotation\AnnotationBuilder;
+use ValuSo\Proxy\ServiceProxyGenerator;
 use PHPUnit_Framework_TestCase;
 
 /**
@@ -10,6 +16,8 @@ use PHPUnit_Framework_TestCase;
  */
 abstract class AbstractTestCase extends PHPUnit_Framework_TestCase
 {
+    const SERVICE_CLASS = 'ValuSoTest\TestAsset\SimpleService';
+    
     /**
      *
      * @var AnnotationBuilder
@@ -41,5 +49,31 @@ abstract class AbstractTestCase extends PHPUnit_Framework_TestCase
         $this->annotationBuilder = null;
         $this->serviceBroker = null;
         parent::tearDown();
+    }
+
+    /**
+     * Generates a proxy service instance
+     * 
+     * @param array $configExtension Extension to loaded class metadata
+     * @param string $class Service class name
+     * @return \ValuSo\Feature\InvokableInterface Proxy service instance
+     */
+    protected function generateProxyService(array $configExtension = array(), $class = self::SERVICE_CLASS)
+    {
+        $annotationBuilder = new AnnotationBuilder();
+        $config = $annotationBuilder->getServiceSpecification($class);
+        $config['name'] = 'Test.Service';
+        
+        $config = ArrayUtils::merge($config->getArrayCopy(), $configExtension);
+        $proxyGenerator = new ServiceProxyGenerator();
+        $proxyGenerator->generateProxyClass($class, $config);
+        
+        $service = new $class();
+        $proxyService = $proxyGenerator->createProxyClassInstance($service);
+        
+        $eventManager = new EventManager();
+        $proxyService->setEventManager($eventManager);
+        
+        return $proxyService;
     }
 }
