@@ -39,16 +39,41 @@ class ServiceProxyGenerator
     private $proxyDirectory;
     
     /**
-     * @see Doctrine\Common\Proxy\ProxyGenerator::__construct()
+     * Optional suffix for proxy class name
+     * 
+     * @var string
      */
-    public function __construct($proxyDir = null, $proxyNs = null)
+    private $proxyClassSuffix;
+    
+    /**
+     * Initialize proxy class generator
+     * 
+     * @param string|null $proxyDir           Directory where proxy class files should be written (default is system temp directory)
+     * @param string|null $proxyNs            Proxy class namespace (default is "ValuSoProxy\\Proxy")
+     * @param string|null $proxyClassSuffix   Optional suffix for proxy class names, useful e.g. 
+     *                                        when testing annotations
+     */
+    public function __construct($proxyDir = null, $proxyNs = null, $proxyClassSuffix = null)
     {
         $this->proxyDirectory = $proxyDir ?: sys_get_temp_dir();
         $this->proxyNamespace = $proxyNs  ?: static::DEFAULT_SERVICE_PROXY_NS;
+        $this->proxyClassSuffix = $proxyClassSuffix;
     }
 
+    /**
+     * Generate proxy class for entity
+     * 
+     * @param mixed $entity
+     * @param array $config
+     * @throws Exception\InvalidArgumentException
+     */
     public function generateProxyClass($entity, $config)
     {
+        if (!is_array($config) && !$config instanceof \ArrayAccess) {
+            throw new \InvalidArgumentException(
+                'Invalid proxy class configuration; array or instance of ArrayAccess expected');
+        }
+        
         if (!is_object($entity)) {
             if ((is_string($entity) && (!class_exists($entity))) // non-existent class
                     || (!is_string($entity)) // not an object or string
@@ -96,19 +121,62 @@ class ServiceProxyGenerator
         rename($tmpFileName, $fileName);
     }
     
+    /**
+     * Get proxy class name for service class name 
+     * 
+     * @param string $className
+     * @return string
+     */
     public function getProxyClassName($className)
     {
-        return rtrim($this->proxyNamespace, '\\') . '\\'.self::MARKER.'\\' . ltrim($className, '\\');
+        $suffix = ltrim($className, '\\');
+        
+        if ($this->proxyClassSuffix !== null) {
+            $suffix .= $this->proxyClassSuffix;    
+        }
+        
+        return rtrim($this->proxyNamespace, '\\') . '\\'.self::MARKER.'\\' . $suffix;
     }
     
+    /**
+     * Get proxy class filename for service class name
+     * 
+     * @param string $className
+     * @return string
+     */
     public function getProxyFilename($className)
     {
         $baseDirectory = $this->proxyDirectory;
+        $suffix = str_replace('\\', '', $className);
+        
+        if ($this->proxyClassSuffix !== null) {
+            $suffix .= $this->proxyClassSuffix;
+        }
         
         return rtrim($baseDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . self::MARKER
-        . str_replace('\\', '', $className) . '.php';
+            . $suffix . '.php';
     }
 
+    /**
+     * Create a new instance of the proxy class
+     * 
+     * @param string $className Service class name
+     * @return mixed
+     */
+    public function createProxyClassInstance($service)
+    {
+        require_once $this->getProxyFilename(get_class($service));
+        
+        $proxyService = $this->getProxyClassName(get_class($service));
+        return new $proxyService($service);
+    }
+
+    /**
+     * Get proxy namespace for service class name
+     * 
+     * @param string $className
+     * @return string
+     */
     public function getProxyNamespace($className)
     {
         $proxyClassName = $this->getProxyClassName($className);
@@ -180,7 +248,7 @@ class ServiceProxyGenerator
                 continue;
             }
             
-            $aliases = $this->getOperationConfig($name, 'aliases');
+            $aliases = (array) $this->getOperationConfig($name, 'aliases');
             $aliases[] = $name;
             
             $invokeSpecs[$name] = ['assoc' => [], 'numeric' => [], 'aliases' => $aliases];
@@ -221,10 +289,10 @@ class ServiceProxyGenerator
             }
             
             // Generate code for context testing
-            $context = $this->getOperationConfig($methodName, 'context', '*');
+            $contexts = $this->getOperationConfig($methodName, 'contexts', '*');
             
-            if ($context !== '*') {
-                $contexts = (array) $context;
+            if ($contexts !== '*') {
+                $contexts = (array) $contexts;
                 
                 $invokeImpl .= '        if(!$this->__matchContext($command, array("'.implode('","', $contexts).'"))) {' . "\n"
                              . '            throw new \ValuSo\Exception\UnsupportedContextException(' . "\n"
@@ -304,7 +372,6 @@ class ServiceProxyGenerator
         $methods            = array();
         $methodNames        = array();
         $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
-        $excludePattern     = $this->serviceConfig['exclude_pattern'];
         
         $excludedMethods    = array(
             '__get'    => true,
