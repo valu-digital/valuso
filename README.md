@@ -23,7 +23,7 @@ class Module implements ConfigProviderInterface
         'valu_so' => [
             'services' => [
                 'ValuLog' => [
-									'class' => 'ValuLog\Service\Log'
+			        		'class' => 'ValuLog\Service\Log'
                 ]
 	        ]
         ]];
