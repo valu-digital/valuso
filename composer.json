@@ -8,7 +8,8 @@
     "description": "Zend Framework 2 service layer",
     "require": {
         "php": "5.4.*",
-    	"zendframework/zendframework": "2.*"
+    	"zendframework/zendframework": "2.*",
+    	"doctrine/common": ">=2.1"
     }
 }
 
