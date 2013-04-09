@@ -25,35 +25,56 @@ class ServiceBrokerFactory implements FactoryInterface
      * This factory uses following configuration scheme:
      * <code>
      * [
-     *     'valu_so' => [
-     *         'use_main_locator'   => <true>|<false>, // Set true to add main service locator as a peering service manager
-     *         'factories'          => [...] // See Zend\Mvc\Service\ServiceManagerConfig
-     *         'invokables'         => [...] // See Zend\Mvc\Service\ServiceManagerConfig
-     *         'abstract_factories' => [...] // See Zend\Mvc\Service\ServiceManagerConfig
-     *         'shared'             => [...] // See Zend\Mvc\Service\ServiceManagerConfig
-     *         'aliases'            => [...] // See Zend\Mvc\Service\ServiceManagerConfig
-     *         'cache'              => [
-     *             'enabled' => true|false, 
-     *             'adapter' => '<ZendCacheAdapter>', 
-     *             'service' => '<ServiceNameReturningCacheAdapter', 
-     *             <adapterConfig> => <value>...]
-     *         'services' => [
-     *             '<id>' => [
-     *                 'name'     => '<ServiceName>', // Name of the service
-     *                 'options'  => [...] // [optional] Options passed to service when initialized,
-     *                 'class'    => '<Class>', // [optional] Service class (same as defining it in 'invokables')
-     *                 'factory'  => '<Class>', // [optional] Factory class  (same as defining it in 'factories')
-     *                 'service'  => <Object|Closure>, // [optional] Service object/closure
-     *                 'priority' => <Priority> // [optinal] Priority number, defaults to 1, highest number is executed first
-     *             ]
-     *         ]
-     *     ]
+     *   'valu_so' => [
+     *       // Set true to add main service locator as a peering service manager
+     *       'use_main_locator'   => <true>|<false>, 
+     *       // See Zend\Mvc\Service\ServiceManagerConfig
+     *       'factories'          => [...],
+     *       // See Zend\Mvc\Service\ServiceManagerConfig 
+     *       'invokables'         => [...],
+     *       // See Zend\Mvc\Service\ServiceManagerConfig 
+     *       'abstract_factories' => [...],
+     *       // See Zend\Mvc\Service\ServiceManagerConfig
+     *       'shared'             => [...],
+     *       // See Zend\Mvc\Service\ServiceManagerConfig
+     *       'aliases'            => [...],
+     *       'cache'              => [
+     *           'enabled' => true|false, 
+     *           'adapter' => '<ZendCacheAdapter>', 
+     *           'service' => '<ServiceNameReturningCacheAdapter', 
+     *           <adapterConfig> => <value>...
+     *       ],
+     *       'services' => [
+     *           '<id>' => [
+     *               // Name of the service
+     *               'name'     => '<ServiceName>',
+     *               // [optional] Options passed to service 
+     * 				 // when initialized
+     *               'options'  => [...],
+     *               // [optional] Service class (same as 
+     * 				 // defining it in 'invokables')
+     *               'class'    => '<Class>',
+     *               // [optional] Factory class  (same as 
+     * 				 // defining it in 'factories')
+     *               'factory'  => '<Class>',
+     *               // [optional] Service object/closure
+     *               'service'  => <Object|Closure>,
+     *               // [optinal] Priority number, 
+     * 				 // defaults to 1, highest 
+     *               // number is executed first 
+     *               'priority' => <Priority> 
+     *           ]
+     *       ]
+     *   ]
      * ]
      * </code>
      * 
      * @see \Zend\ServiceManager\FactoryInterface::createService()
      * @return ServiceBroker
      */
+
+    
+    
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
         $config    = $serviceLocator->get('Config');
