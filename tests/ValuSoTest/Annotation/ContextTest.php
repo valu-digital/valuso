@@ -54,13 +54,13 @@ class ContextTest extends AbstractTestCase
         $this->assertEquals(['http', 'native'], $contextAnnotation->getContext());
     }
     
-    public function testOperationContainsAliasConfiguration()
+    public function testOperationContainsContextConfiguration()
     {
         $service = new TestService();
         $specs = $this->annotationBuilder->getServiceSpecification($service);
     
         $this->assertArrayHasKey('operations', $specs);
-        $this->assertEquals('save', $specs['operations']['update']['aliases']);
+        $this->assertEquals(["http*", "native"], $specs['operations']['httpOperation']['contexts']);
     }
     
     public function testInvokeWithDefaultContext()

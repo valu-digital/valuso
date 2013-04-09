@@ -165,7 +165,14 @@ class ServiceProxyGenerator
      */
     public function createProxyClassInstance($service)
     {
-        require_once $this->getProxyFilename(get_class($service));
+        $file = $this->getProxyFilename(get_class($service));
+        
+        if (file_exists($file)) {
+            require_once $file;
+        } else {
+            throw new \RuntimeException(
+                sprintf('Proxy class for service "%s" has not been initialized', get_class($service)));
+        }
         
         $proxyService = $this->getProxyClassName(get_class($service));
         return new $proxyService($service);
@@ -248,7 +255,7 @@ class ServiceProxyGenerator
                 continue;
             }
             
-            $aliases = (array) $this->getOperationConfig($name, 'aliases');
+            $aliases = $this->getOperationConfig($name, 'aliases');
             $aliases[] = $name;
             
             $invokeSpecs[$name] = ['assoc' => [], 'numeric' => [], 'aliases' => $aliases];

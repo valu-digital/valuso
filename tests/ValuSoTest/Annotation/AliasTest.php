@@ -30,7 +30,7 @@ class AliasTest extends AbstractTestCase
         $specs = $this->annotationBuilder->getServiceSpecification($service);
     
         $this->assertArrayHasKey('operations', $specs);
-        $this->assertEquals('save', $specs['operations']['update']['aliases']);
+        $this->assertEquals(['save'], $specs['operations']['update']['aliases']);
     }
     
     public function testInvokeUsingAlias()

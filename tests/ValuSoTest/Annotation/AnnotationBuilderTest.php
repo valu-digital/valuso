@@ -68,7 +68,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
             ['events' => [
                 ['type' => 'pre', 'name' => null, 'args' => null],    
                 ['type' => 'post', 'name' => 'post.<service>.run', 'args' => ['job', 'delayed']],   
-            ], 'context' => '*', 'aliases' => []],
+            ], 'context' => '*', 'aliases' => [], 'inherit' => false],
             $specs['operations']['run']->getArrayCopy()
         );
     }
@@ -100,7 +100,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
         $this->assertInstanceOf('\ArrayObject', $specs['operations']['getInternal']);
         
         $this->assertEquals(
-            ['context' => '*', 'events' => [], 'aliases' => []],
+            ['context' => '*', 'events' => [], 'aliases' => [], 'inherit' => false],
             $specs['operations']['getInternal']->getArrayCopy()
         );
     }

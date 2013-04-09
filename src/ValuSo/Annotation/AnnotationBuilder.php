@@ -1,16 +1,21 @@
 <?php
 namespace ValuSo\Annotation;
 
-use Zend\Code\Reflection\MethodReflection;
-
+use ValuSo\Annotation\Listener\ServiceAnnotationsListener;
+use ValuSo\Annotation\Listener\OperationAnnotationsListener;
 use ValuSo\Exception;
 use ArrayObject;
 use Zend\Code\Reflection\ClassReflection;
 use Zend\Code\Annotation\AnnotationCollection;
 use Zend\Code\Annotation\AnnotationManager;
 use Zend\Code\Annotation\Parser;
+use Zend\Code\Reflection\MethodReflection;
+use Zend\EventManager\EventManagerInterface;
+use Zend\EventManager\EventManagerAwareInterface;
+use Zend\EventManager\Event;
+use Zend\EventManager\EventManager;
 
-class AnnotationBuilder
+class AnnotationBuilder implements EventManagerAwareInterface
 {
     
     /**
@@ -19,6 +24,11 @@ class AnnotationBuilder
      * @var \ValuSo\Annotation\AnnotationManager
      */
     private $annotationManager;
+    
+    /**
+     * @var EventManagerInterface
+     */
+    protected $events;
     
     /**
      * @var array Default annotations to register
@@ -55,19 +65,24 @@ class AnnotationBuilder
         }
     
         $serviceSpec       = new ArrayObject();
-        $operationSpec     = new ArrayObject();
+        $serviceSpec['operations'] = new ArrayObject();
     
         $reflection  = new ClassReflection($entity);
-        $this->parseClassSpecifications($reflection, $serviceSpec, $operationSpec);
-        $serviceSpec['operations'] = $operationSpec;
+        $this->parseClassSpecifications($reflection, $serviceSpec);
         
         return $serviceSpec;
     }
     
-    protected function parseClassSpecifications(ClassReflection $class, ArrayObject $serviceSpec, ArrayObject $operationSpec)
+    /**
+     * Parse class level specs for service
+     * 
+     * @param ClassReflection $class
+     * @param ArrayObject $serviceSpec
+     */
+    protected function parseClassSpecifications(ClassReflection $class, ArrayObject $serviceSpec)
     {
         if ($class->getParentClass()) {
-            $this->parseClassSpecifications($class->getParentClass(), $serviceSpec, $operationSpec);
+            $this->parseClassSpecifications($class->getParentClass(), $serviceSpec);
         }
         
         $annotationManager = $this->getAnnotationManager();
@@ -91,7 +106,7 @@ class AnnotationBuilder
                 $annotations = new AnnotationCollection();
             }
         
-            $this->configureOperation($annotations, $method, $serviceSpec, $operationSpec);
+            $this->configureOperation($annotations, $method, $serviceSpec);
         }
     }
     
@@ -131,6 +146,37 @@ class AnnotationBuilder
     }
     
     /**
+     * Get event manager
+     *
+     * @return EventManagerInterface
+     */
+    public function getEventManager()
+    {
+        if (null === $this->events) {
+            $this->setEventManager(new EventManager());
+        }
+        return $this->events;
+    }
+    
+    /**
+     * Set event manager instance
+     *
+     * @param  EventManagerInterface $events
+     * @return AnnotationBuilder
+     */
+    public function setEventManager(EventManagerInterface $events)
+    {
+        $events->setIdentifiers(array(
+            __CLASS__,
+            get_class($this),
+        ));
+        $events->attach(new OperationAnnotationsListener());
+        $events->attach(new ServiceAnnotationsListener());
+        $this->events = $events;
+        return $this;
+    }
+    
+    /**
      * Configure service based on annotations
      * 
      * @param AnnotationCollection $annotations
@@ -140,12 +186,13 @@ class AnnotationBuilder
     protected function configureService(AnnotationCollection $annotations, 
                                         ClassReflection $reflection, ArrayObject $serviceSpec)
     {
+        $events = $this->getEventManager();
         foreach ($annotations as $annotation) {
-            if ($annotation instanceof Version) {
-                $serviceSpec['version'] = $annotation->getVersion();
-            } elseif ($annotation instanceof ExcludePattern) {
-                $serviceSpec['exclude_patterns'] = $annotation->getExcludePattern();
-            }
+            $events->trigger(__FUNCTION__, $this, array(
+                    'annotation'  => $annotation,
+                    'name'        => $reflection->getName(),
+                    'serviceSpec' => $serviceSpec
+            ));
         }
     }
     
@@ -155,61 +202,55 @@ class AnnotationBuilder
      * @param AnnotationCollection $annotations
      * @param MethodReflection $method
      * @param ArrayObject $serviceSpec
-     * @param ArrayObject $operationSpec
      */
     protected function configureOperation(AnnotationCollection $annotations, 
-                                          MethodReflection $method, ArrayObject $serviceSpec, 
-                                          ArrayObject $operationSpec)
+                                          MethodReflection $method, ArrayObject $serviceSpec)
     {
-        $operation = new ArrayObject(array(
+        $operationSpec = new ArrayObject(array(
             'events' => array(), 
             'context' => '*',
-            'aliases' => [])
+            'aliases' => array(),
+            'inherit' => false,
+            'exclude' => null)
         );
         
-        $excludePatterns = (array) $serviceSpec['exclude_patterns'];
-        $exclude = null;
+        $events = $this->getEventManager();
+        
+        $event = new Event();
+        $event->setParams(array(
+                'name'        => $method->getName(),
+                'serviceSpec' => $serviceSpec,
+                'operationSpec' => $operationSpec
+        ));
         
         foreach ($annotations as $annotation) {
-        
-            // Use operation level exclude
-            if ($annotation instanceof Exclude) {
-                $exclude = $annotation->getExclude();
-                break;
-            }
-            
-            // Use existing definitions
-            if ($annotation instanceof Inherit) {
-                return;
-            }
+            $event->setParam('annotation', $annotation);
+            $events->trigger(__FUNCTION__, $this, $event);
         }
         
-        // Fallback: class level exclusion pattern
-        if ($exclude === null && sizeof($excludePatterns)) {
+        // Skip annotations if inherit flag is set
+        if ($operationSpec['inherit'] === true) {
+            return;
+        }
+        
+        // Do not configure operation if it is excluded on
+        // service or operation level
+        $excludePatterns = $serviceSpec['exclude_patterns'];
+
+        if ($operationSpec['exclude'] === true) {
+            return;
+        } elseif ($operationSpec['exclude'] === null && sizeof($excludePatterns)) {
             foreach ($excludePatterns as $excludePattern) {
                if (preg_match($excludePattern, $method->getName())) {
-                   $exclude = true;
-                   break;
+                   return;
                }
             }
         }
         
-        // Skip this method, if excluded
-        if ($exclude) {
-            return;
-        }
+        unset($operationSpec['exclude']);
         
-        foreach ($annotations as $annotation) {
-
-            if ($annotation instanceof Trigger) {
-                $operation['events'][] = $annotation->getEventDescription();
-            } elseif ($annotation instanceof Context) {
-                $operation['contexts'] = $annotation->getContext();
-            } elseif ($annotation instanceof Alias) {
-                $operation['aliases'] = $annotation->getAlias();
-            }
-        }
-        
-        $operationSpec[$method->getName()] = $operation;
+        // Configure operation (overwrites any existing configurations
+        // for this operation)
+        $serviceSpec['operations'][$method->getName()] = $operationSpec;
     }
 }
