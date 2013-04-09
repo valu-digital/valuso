@@ -1,0 +1,14 @@
+{
+    "name": "valu/valuso",
+    "version": "0.9.0",
+    "type": "library",
+    "keywords": [
+        "valu", "service", "zend framework"
+    ],
+    "description": "Zend Framework 2 service layer",
+    "require": {
+        "php": "5.4.*",
+    	"zendframework/zendframework": "2.*"
+    }
+}
+
