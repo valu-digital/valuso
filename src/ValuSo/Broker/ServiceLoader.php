@@ -13,7 +13,7 @@ use Zend\EventManager\EventManagerInterface;
 use	Zend\ServiceManager\ServiceLocatorInterface;
 use	Zend\ServiceManager\ServiceLocatorAwareInterface;
 use	Zend\ServiceManager\ServiceManager;
-use Zend\Mvc\Service\ServiceManagerConfig;
+use Zend\ServiceManager\ConfigInterface as ServiceManagerConfig;
 
 class ServiceLoader{
 	
@@ -229,7 +229,8 @@ class ServiceLoader{
 			}
 			
 			if($factory){
-			    $this->getServicePluginManager()->setFactory($id, $factory);
+			    $this->getServicePluginManager()->setFactory(
+		            $id, $factory);
 			}
 		}
 		
@@ -315,6 +316,8 @@ class ServiceLoader{
 	 */
 	public function disableService($id)
 	{
+	    $id = $this->normalizeServiceId($id);
+	    
 	    if(!isset($this->services[$id])){
 	        throw new Exception\ServiceNotFoundException(
                 sprintf('Service ID "%s" does not exist', $id)
@@ -352,7 +355,7 @@ class ServiceLoader{
             $options = $this->services[$id]['options'];
         }
         
-        return $this->getServicePluginManager()->get($id, $options);
+        return $this->getServicePluginManager()->get($id, $options, true, true);
 	}
 
 	/**
@@ -418,7 +421,7 @@ class ServiceLoader{
 	/**
 	 * Retrieve service manager
 	 *
-	 * @return \Valu\Service\ServiceManager
+	 * @return \ValuSo\Broker\ServicePluginManager
 	 */
 	protected function getServicePluginManager()
 	{
