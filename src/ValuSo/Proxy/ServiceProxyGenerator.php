@@ -378,7 +378,7 @@ class ServiceProxyGenerator
     {
         $methods            = array();
         $methodNames        = array();
-        $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
+        $reflectionMethods  = $reflectionClass->getMethods();
         
         $excludedMethods    = array(
             '__get'    => true,
@@ -412,6 +412,12 @@ class ServiceProxyGenerator
             $eventConfig        = $this->getOperationConfig($name, 'events');
             $preEventExists     = false;
             $postEventExists    = false;
+            
+            // Generate service methods only for public methods or
+            // methods that have events configured 
+            if (!$method->isPublic() && !$eventConfig) {
+                continue;
+            }
             
             if ($eventConfig) {
                 foreach ($eventConfig as $specs) {
@@ -552,7 +558,7 @@ class ServiceProxyGenerator
     {
         $config   = $this->getOperationConfig($operationName, 'events', array());
         $code     = '';
-        $service  = strtolower($this->serviceConfig['name']);
+        $serviceId  = strtolower($this->serviceConfig['service_id']);
         $responseInjected = false;
         
         if (!empty($config)) {
@@ -564,10 +570,10 @@ class ServiceProxyGenerator
                     }
                     
                     if (!$specs['name']) {
-                        $specs['name'] = $type . '.' . $service . '.' . $operationName; 
+                        $specs['name'] = $type . '.' . $serviceId . '.' . $operationName; 
                     }
                     
-                    $specs['name'] = str_replace('<service>', $service, strtolower($specs['name']));
+                    $specs['name'] = str_replace('<service>', $serviceId, strtolower($specs['name']));
                     
                     $code .= '// Trigger "'.$type.'" event' . "\n";
                     
