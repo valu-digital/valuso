@@ -1,5 +1,10 @@
 <?php
 return [
+    'service_manager' => [
+        'factories' => [
+            'ServiceBroker' => 'ValuSo\Broker\ServiceBrokerFactory',
+        ]
+    ],
     'controllers' => [
         'invokables' => [
             'ValuSoServiceController' => 'ValuSo\Controller\ServiceController',
@@ -35,6 +40,7 @@ return [
         ],
     ],
     'valu_so' => [
+        'use_main_locator' => true,
         'services' => []
     ]
 ];
