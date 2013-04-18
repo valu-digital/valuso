@@ -3,6 +3,8 @@ namespace ValuSo;
 
 use Zend\ModuleManager\Feature;
 use Zend\EventManager\EventInterface;
+use Zend\Loader\AutoloaderFactory;
+use Zend\Loader\StandardAutoloader;
 
 class Module
     implements  Feature\AutoloaderProviderInterface, 
@@ -18,12 +20,9 @@ class Module
     public function getAutoloaderConfig()
     {
         return array(
-            'Zend\Loader\ClassMapAutoloader' => array(
-                __DIR__ . '/autoload_classmap.php',
-            ),
-            'Zend\Loader\StandardAutoloader' => array(
-                'namespaces' => array(
-                    __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__
+            AutoloaderFactory::STANDARD_AUTOLOADER => array(
+                StandardAutoloader::LOAD_NS => array(
+                    __NAMESPACE__ => __DIR__,
                 ),
             ),
         );
@@ -36,6 +35,6 @@ class Module
      */
     public function getConfig()
     {
-        return include __DIR__ . '/config/module.config.php';
+        return include __DIR__ . '/../../config/module.config.php';
     }
 }
