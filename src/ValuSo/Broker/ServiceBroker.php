@@ -1,6 +1,8 @@
 <?php
 namespace ValuSo\Broker;
 
+use Zend\EventManager\EventManagerAwareInterface;
+
 use ValuSo\Command\Command;
 use ValuSo\Command\CommandManager;
 use ValuSo\Command\CommandInterface;
@@ -117,8 +119,15 @@ class ServiceBroker{
 		$that = $this;
 		
 		$this->loader->addInitializer(function ($instance) use ($that) {
-		    if($instance instanceof Feature\ServiceBrokerAwareInterface){
+		    
+		    // Inject broker to services
+		    if ($instance instanceof Feature\ServiceBrokerAwareInterface) {
 		        $instance->setServiceBroker($that);
+		    }
+		    
+		    // Inject event manager to services
+		    if ($instance instanceof EventManagerAwareInterface) {
+		        $instance->setEventManager($that->getEventManager());
 		    }
 		});
 		
