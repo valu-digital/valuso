@@ -86,7 +86,7 @@ class CommandManager
         
         $listener = new LazyCallbackHandler(
             $callback, 
-            array('service' => $service, 'priority' => $priority, 'serviceId' => $id));
+            array('service' => $service, 'priority' => $priority, 'service_id' => $id));
     
         // Inject the callback handler into the queue
         $this->services[$service]->insert($listener, $priority);
@@ -162,7 +162,7 @@ class CommandManager
             // Lazy load service as needed
             if (!$listener->getCallback()) {
                 $listener->setCallback(
-                    $this->getServiceLoader()->load($listener->getMetadatum('serviceId')));
+                    $this->getServiceLoader()->load($listener->getMetadatum('service_id')));
             }
             
             try{
