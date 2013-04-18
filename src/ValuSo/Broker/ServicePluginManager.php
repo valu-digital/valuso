@@ -1,6 +1,10 @@
 <?php
 namespace ValuSo\Broker;
 
+use Zend\ServiceManager\InitializerInterface;
+
+use Zend\Cache\StorageFactory;
+
 use ValuSo\Proxy\ServiceProxyGenerator;
 use ValuSo\Exception;
 use ValuSo\Annotation\AnnotationBuilder;
@@ -60,9 +64,10 @@ class ServicePluginManager extends AbstractPluginManager
      * @param  string $name
      * @param  array $options
      * @param  bool $usePeeringServiceManagers
+     * @param  bool $fetchAsService 
      * @return object
      */
-    public function get($name, $options = array(), $usePeeringServiceManagers = true)
+    public function get($name, $options = array(), $usePeeringServiceManagers = true, $fetchAsService = false)
     {
         $this->instanceNames[]     = $name;
         $this->instanceOptions[]   = $options;
@@ -75,7 +80,7 @@ class ServicePluginManager extends AbstractPluginManager
         $cName = $this->canonicalizeName($name);
         
         // Wrap instance if it is not callable
-        if (!is_callable($instance)) {
+        if ($fetchAsService && !is_callable($instance)) {
             $instance = $this->wrapService($name, $instance);
             
             // Replace cached instance with wrapper
@@ -132,21 +137,46 @@ class ServicePluginManager extends AbstractPluginManager
         ));
     }
     
+    /**
+     * Set cache storage
+     * 
+     * @param StorageInterface $cache
+     */
     public function setCache(StorageInterface $cache)
     {
         $this->cache = $cache;
     }
     
+    /**
+     * Get cache storage
+     * 
+     * @return \Zend\Cache\Storage\StorageInterface
+     */
     public function getCache()
     {
+        if (!$this->cache) {
+            $this->setCache(
+                StorageFactory::factory(['adapter' => 'array']));
+        }
+        
         return $this->cache;
     }
     
+    /**
+     * Set proxy generator
+     * 
+     * @param ServiceProxyGenerator $proxyGenerator
+     */
     public function setProxyGenerator(ServiceProxyGenerator $proxyGenerator)
     {
         $this->proxyGenerator = $proxyGenerator;
     }
     
+    /**
+     * Retrieve proxy generator
+     * 
+     * @return \ValuSo\Proxy\ServiceProxyGenerator
+     */
     public function getProxyGenerator()
     {
         if (!$this->proxyGenerator) {
@@ -179,13 +209,13 @@ class ServicePluginManager extends AbstractPluginManager
 	/**
      * Wrap service with proxy instance
      * 
-     * @param string $name
+     * @param string $serviceId
      * @param object $instance
      * @return object
      */
-    protected function wrapService($name, $instance)
+    protected function wrapService($serviceId, $instance)
     {
-        if ($this->cache && ($fqcn = $this->cache->getItem($name)) && class_exists($fqcn)) {
+        if (($fqcn = $this->getCache()->getItem($serviceId)) && class_exists($fqcn)) {
             return new $fqcn($instance);
         } else {
             $className      = get_class($instance);
@@ -193,15 +223,26 @@ class ServicePluginManager extends AbstractPluginManager
             $fqcn           = $proxyGenerator->getProxyClassName($className);
             
             $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
-            $config['name'] = $name; // Overwrite any previously configured name
+            $config['service_id'] = $serviceId; // Overwrite any previously configured name
 
             $proxyGenerator->generateProxyClass($instance, $config);
             $proxy = $proxyGenerator->createProxyClassInstance($instance);
             
-            if ($this->cache) {
-                $this->cache->setItem($name, $fqcn);
+            if ($this->getCache()) {
+                $this->getCache()->setItem($serviceId, $fqcn);
             }
-        
+            
+            // Run initializers for the proxy class
+            foreach ($this->initializers as $initializer) {
+                if ($initializer instanceof InitializerInterface) {
+                    $initializer->initialize($proxy, $this);
+                } elseif (is_object($initializer) && is_callable($initializer)) {
+                    $initializer($proxy, $this);
+                } else {
+                    call_user_func($initializer, $proxy, $this);
+                }
+            }
+            
             return $proxy;
         }
     }
