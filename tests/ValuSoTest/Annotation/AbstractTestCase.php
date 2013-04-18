@@ -62,7 +62,7 @@ abstract class AbstractTestCase extends PHPUnit_Framework_TestCase
     {
         $annotationBuilder = new AnnotationBuilder();
         $config = $annotationBuilder->getServiceSpecification($class);
-        $config['name'] = 'Test.Service';
+        $config['service_id'] = 'Test.Service';
         
         $config = ArrayUtils::merge($config->getArrayCopy(), $configExtension);
         $proxyGenerator = new ServiceProxyGenerator(null, null, uniqid());
