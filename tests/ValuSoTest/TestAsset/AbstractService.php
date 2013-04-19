@@ -8,7 +8,7 @@ use ValuSo\Feature\ProxyAwareInterface;
  * @Annotation\Version("0.9")
  * @Annotation\ExcludePattern("set")
  */
-abstract class AbstractService
+abstract class AbstractService extends AbstractExcludedService
 {
     
     /**
