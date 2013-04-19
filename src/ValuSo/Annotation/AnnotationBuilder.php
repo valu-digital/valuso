@@ -1,6 +1,8 @@
 <?php
 namespace ValuSo\Annotation;
 
+use ValuSo\Exception\AnnotationException;
+
 use ValuSo\Annotation\Listener\ServiceAnnotationsListener;
 use ValuSo\Annotation\Listener\OperationAnnotationsListener;
 use ValuSo\Exception;
@@ -94,13 +96,31 @@ class AnnotationBuilder implements EventManagerAwareInterface
         
         // Each class must define its own exclusion pattern
         $serviceSpec['exclude_patterns'] = array();
+        $serviceSpec['exclude'] = false;
+        $serviceSpec['context'] = '*';
         
         if ($annotations instanceof AnnotationCollection) {
             $this->configureService($annotations, $class, $serviceSpec);
         }
         
+        // Exit here if service is excluded
+        if ($serviceSpec['exclude']) {
+            return;
+        }
+
         foreach ($class->getMethods() as $method) {
-            $annotations = $method->getAnnotations($annotationManager);
+            
+            // Skip method if it is not owned by this class
+            if ($method->getDeclaringClass()->getName() !== $class->getName()) {
+                continue;
+            }
+            
+            try{
+                $annotations = $method->getAnnotations($annotationManager);
+            } catch(\Doctrine\Common\Annotations\AnnotationException $e) {
+                throw new AnnotationException(
+                    'Error parsing annotation for class "'.$class->getName().'::'.$method->getName().'"', 0, $e);
+            }
             
             if (!$annotations instanceof AnnotationCollection) {
                 $annotations = new AnnotationCollection();
@@ -208,7 +228,7 @@ class AnnotationBuilder implements EventManagerAwareInterface
     {
         $operationSpec = new ArrayObject(array(
             'events' => array(), 
-            'context' => '*',
+            'context' => $serviceSpec['context'],
             'aliases' => array(),
             'inherit' => false,
             'exclude' => null)
