@@ -15,27 +15,10 @@ class OperationAnnotationsListener extends AbstractAnnotationsListener
     public function attach(EventManagerInterface $events)
     {
         $this->listeners[] = $events->attach('configureOperation', array($this, 'handleExcludeAnnotation'));
+        $this->listeners[] = $events->attach('configureOperation', array($this, 'handleContextAnnotation'));
         $this->listeners[] = $events->attach('configureOperation', array($this, 'handleInheritAnnotation'));
         $this->listeners[] = $events->attach('configureOperation', array($this, 'handleTriggerAnnotation'));
-        $this->listeners[] = $events->attach('configureOperation', array($this, 'handleContextAnnotation'));
         $this->listeners[] = $events->attach('configureOperation', array($this, 'handleAliasAnnotation'));
-    }
-    
-    /**
-     * Handle exclude annotation
-     *
-     * @param \Zend\EventManager\EventInterface $e
-     * @return void
-     */
-    public function handleExcludeAnnotation($e)
-    {
-        $annotation = $e->getParam('annotation');
-        if (!$annotation instanceof Annotation\Exclude) {
-            return;
-        }
-    
-        $operationSpec = $e->getParam('operationSpec');
-        $operationSpec['exclude'] = $annotation->getExclude();
     }
     
     /**
@@ -73,23 +56,6 @@ class OperationAnnotationsListener extends AbstractAnnotationsListener
     }
     
     /**
-     * Handle context annotation
-     *
-     * @param \Zend\EventManager\EventInterface $e
-     * @return void
-     */
-    public function handleContextAnnotation($e)
-    {
-        $annotation = $e->getParam('annotation');
-        if (!$annotation instanceof Annotation\Context) {
-            return;
-        }
-    
-        $operationSpec = $e->getParam('operationSpec');
-        $operationSpec['contexts'] = $annotation->getContext();
-    }
-    
-    /**
      * Handle alias annotation
      *
      * @param \Zend\EventManager\EventInterface $e
@@ -104,5 +70,10 @@ class OperationAnnotationsListener extends AbstractAnnotationsListener
     
         $operationSpec = $e->getParam('operationSpec');
         $operationSpec['aliases'] = (array) $annotation->getAlias();
+    }
+    
+    protected function getEventParamName()
+    {
+        return 'operationSpec';
     }
 }

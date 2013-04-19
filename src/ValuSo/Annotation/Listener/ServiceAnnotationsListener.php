@@ -14,10 +14,12 @@ class ServiceAnnotationsListener extends AbstractAnnotationsListener
      */
     public function attach(EventManagerInterface $events)
     {
+        $this->listeners[] = $events->attach('configureService', array($this, 'handleExcludeAnnotation'));
+        $this->listeners[] = $events->attach('configureService', array($this, 'handleContextAnnotation'));
         $this->listeners[] = $events->attach('configureService', array($this, 'handleExcludePatternAnnotation'));
         $this->listeners[] = $events->attach('configureService', array($this, 'handleVersionAnnotation'));
     }
-    
+
     /**
      * Handle exclude annotation
      *
@@ -50,5 +52,10 @@ class ServiceAnnotationsListener extends AbstractAnnotationsListener
     
         $serviceSpec = $e->getParam('serviceSpec');
         $serviceSpec['version'] = $annotation->getVersion();
+    }
+    
+    protected function getEventParamName()
+    {
+        return 'serviceSpec';
     }
 }
