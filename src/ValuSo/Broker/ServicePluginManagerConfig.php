@@ -28,6 +28,13 @@ use Zend\ServiceManager\ServiceManagerAwareInterface;
 class ServicePluginManagerConfig implements ConfigInterface
 {
     /**
+     * Initializers that should be registered
+     *
+     * @var array
+     */
+    protected $initializers = array();
+    
+    /**
      * Services that can be instantiated without factories
      *
      * @var array
@@ -93,6 +100,10 @@ class ServicePluginManagerConfig implements ConfigInterface
      */
     public function __construct(array $configuration = array())
     {
+        if (isset($configuration['initializers'])) {
+            $this->initializers = array_merge($this->initializers, $configuration['initializers']);
+        }
+        
         if (isset($configuration['invokables'])) {
             $this->invokables = array_merge($this->invokables, $configuration['invokables']);
         }
@@ -139,6 +150,10 @@ class ServicePluginManagerConfig implements ConfigInterface
      */
     public function configureServiceManager(ServiceManager $serviceManager)
     {
+        foreach ($this->initializers as $name => $initializer) {
+            $serviceManager->addInitializer($initializer);
+        }
+        
         foreach ($this->invokables as $name => $class) {
             $serviceManager->setInvokableClass($name, $class);
         }
