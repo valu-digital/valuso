@@ -1,8 +1,8 @@
 <?php
 namespace ValuSo\Broker;
 
+use ArrayAccess;
 use ValuSo\Command\Command;
-
 use ValuSo\Broker\ServiceBroker;
 
 /**
@@ -49,6 +49,13 @@ class Worker{
 	protected $context = null;
 	
 	/**
+	 * Identity
+	 * 
+	 * @var \ArrayAccess
+	 */
+	protected $identity = null;
+	
+	/**
 	 * Queue priority
 	 * 
 	 * @var int|null
@@ -66,8 +73,21 @@ class Worker{
 	 * 
 	 * @param string $context
 	 */
-	public function context($context){
+	public function context($context)
+	{
 	    $this->context = $context;
+	    return $this;
+	}
+	
+	/**
+	 * Set user identity information for this operation
+	 * 
+	 * @param ArrayAccess $identity
+	 * @return \ValuSo\Broker\Worker
+	 */
+	public function identity(ArrayAccess $identity)
+	{
+	    $this->identity = $identity;
 	    return $this;
 	}
 	
@@ -86,6 +106,24 @@ class Worker{
 	{
 		$this->callback = $callback;
 		return $this;
+	}
+	
+	/**
+	 * @return \ValuSo\Broker\Worker
+	 */
+	public function untilTrue()
+	{
+	    $this->until(function($response){if($response === true) return true;});
+	    return $this;
+	}
+	
+	/**
+	 * @return \ValuSo\Broker\Worker
+	 */
+	public function untilFalse()
+	{
+	    $this->until(function($response){if($response === false) return true;});
+	    return $this;
 	}
 	
 	/**
@@ -122,7 +160,19 @@ class Worker{
 	public function exec($operation, $args = null)
 	{
 		$args = ($args) ?:$this->args;
-		$command = new Command($this->service, $operation, $args, $this->context);
+		$command = new Command($this->service, $operation, $args);
+		
+		if ($this->context) {
+		    $command->setContext($this->context);
+		} else {
+		    $command->setContext($this->broker->getDefaultContext());
+		}
+		
+		if ($this->identity) {
+		    $command->setIdentity($this->identity);
+		} else {
+		    $command->setIdentity($this->broker->getDefaultIdentity());
+		}
 		
 		if ($this->priority !== null) {
 		    return $this->broker->queue($command, $this->callback);
