@@ -26,6 +26,8 @@ class ServiceBrokerFactory implements FactoryInterface
      * <code>
      * [
      *   'valu_so' => [
+     *       // See Zend\Mvc\Service\ServiceManagerConfig
+     *       'initializers'       => [...],
      *       // Set true to add main service locator as a peering service manager
      *       'use_main_locator'   => <true>|<false>, 
      *       // See Zend\Mvc\Service\ServiceManagerConfig
