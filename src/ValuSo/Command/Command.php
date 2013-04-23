@@ -3,7 +3,8 @@ namespace ValuSo\Command;
 
 use Zend\EventManager\ResponseCollection;
 use Zend\EventManager\Event;
-use \ArrayObject;
+use ArrayObject;
+use ArrayAccess;
 
 /**
  * This class encapsulates service command information and event
@@ -63,6 +64,13 @@ class Command
      * @var ResponseCollection
      */
     protected $responses;
+    
+    /**
+     * User identity information
+     * 
+     * @var \ArrayAccess
+     */
+    protected $identity;
     
     /**
      * Initialize a new command
@@ -191,5 +199,25 @@ class Command
     {
         $this->responses = $responses;
         return $this;
+    }
+    
+    /**
+     * Set identity of the user executing this command
+     *
+     * @param \ArrayAccess $identity
+     */
+    public function setIdentity(\ArrayAccess $identity)
+    {
+        $this->identity = $identity;
+    }
+    
+    /**
+     * Retrieve identity of the user executing this command
+     *
+     * @return ArrayAccess
+     */
+    public function getIdentity()
+    {
+        return $this->identity;
     }
 }
