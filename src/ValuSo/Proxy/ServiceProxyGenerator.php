@@ -279,9 +279,14 @@ class ServiceProxyGenerator
         
         // Define body for __invoke
         $invokeImpl =
-        'if (!in_array($command->getOperation(), ["' . implode('","', $methodAliases) . '"]))'. "\n" .
-        "{\n".
+        'if (!in_array($command->getOperation(), ["' . implode('","', $methodAliases) . '"])) {'. "\n" .
         '    $this->__operationNotFound($command);' . "\n" .
+        '}' . "\n\n";
+        
+        // Define injector for identity
+        $invokeImpl .=
+        'if ($command->getIdentity() && $this->__wrappedObject instanceof \ValuSo\Feature\IdentityAwareInterface) {'.
+        '    $this->__wrappedObject->setIdentity($command->getIdentity());' . "\n".
         '}' . "\n\n";
         
         $invokeImpl .= '$isAssoc = !$command->hasParam(0);' . "\n";
