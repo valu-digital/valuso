@@ -120,7 +120,15 @@ class AnnotationBuilder implements EventManagerAwareInterface
             } catch(\Doctrine\Common\Annotations\AnnotationException $e) {
                 throw new AnnotationException(
                     'Error parsing annotation for class "'.$class->getName().'::'.$method->getName().'"', 0, $e);
+            } catch(\Exception $e) {
+                // Due to ZF2 bug with parsing annotations for traits, skip related error
+                if (strpos($e->getMessage(), 'Argument 3 passed to Zend\Code\Scanner\AnnotationScanner') === 0) {
+                    continue;
+                }
+                
+                throw $e;
             }
+            
             
             if (!$annotations instanceof AnnotationCollection) {
                 $annotations = new AnnotationCollection();
