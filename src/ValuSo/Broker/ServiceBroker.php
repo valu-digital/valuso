@@ -2,7 +2,6 @@
 namespace ValuSo\Broker;
 
 use Zend\EventManager\EventManagerAwareInterface;
-
 use ValuSo\Command\Command;
 use ValuSo\Command\CommandManager;
 use ValuSo\Command\CommandInterface;
@@ -12,8 +11,9 @@ use	ValuSo\Exception\ServiceNotFoundException;
 use	Zend\EventManager\EventManagerInterface;
 use	Zend\EventManager\ResponseCollection;
 use Zend\EventManager\EventManager;
-use \ArrayObject;
-use \Traversable;
+use ArrayObject;
+use Traversable;
+use ArrayAccess;
 
 /**
  * 
@@ -42,6 +42,13 @@ class ServiceBroker{
 	 * @var string
 	 */
 	private $defaultContext;
+	
+	/**
+	 * Default identity
+	 * 
+	 * @var \ArrayAccess
+	 */
+	private $defaultIdentity;
 	
 	/**
 	 * Initialize and configure service broker
@@ -105,6 +112,41 @@ class ServiceBroker{
 	 */
 	public function setDefaultContext($context){
 	    $this->defaultContext = $context;
+	    return $this;
+	}
+	
+	/**
+	 * Retrieve default identity
+	 * 
+	 * @return \ArrayAccess
+	 */
+	public function getDefaultIdentity()
+	{
+	    if (!$this->defaultIdentity) {
+	        $this->defaultIdentity = new ArrayObject(array());
+	        
+	        $responses = $this->execute(
+                'Identity', 
+                'getIdentity', 
+                array(), 
+                function($response){if($response instanceof ArrayAccess) return true;});
+	        
+	        if (sizeof($responses)) {
+	            $this->defaultIdentity = $responses->last();
+	        }
+	    }
+	    
+	    return $this->defaultIdentity;
+	}
+	
+	/**
+	 * Set default identity
+	 * 
+	 * @param ArrayAccess $identity
+	 */
+	public function setDefaultIdentity(ArrayAccess $identity)
+	{
+	    $this->defaultIdentity = $identity;
 	    return $this;
 	}
 	
@@ -225,7 +267,11 @@ class ServiceBroker{
             $operation,
             $argv,
 	        $context);
-    
+	    
+	    if ($this->getDefaultIdentity()) {
+	        $command->setIdentity($this->getDefaultIdentity());
+	    }
+	    
 	    return $this->dispatch($command, $callback);
 	}
 	
