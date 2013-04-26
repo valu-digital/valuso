@@ -90,6 +90,13 @@ class ServicePluginManagerConfig implements ConfigInterface
      * @var string
      */
     protected $proxyNs;
+    
+    /**
+     * Auto-create strategy for proxy classes
+     * 
+     * @var string
+     */
+    protected $proxyAutoCreateStrategy;
 
     /**
      * Constructor
@@ -134,6 +141,10 @@ class ServicePluginManagerConfig implements ConfigInterface
 
         if (isset($configuration['proxy_ns'])) {
             $this->proxyNs = $configuration['proxy_ns'];
+        }
+        
+        if (isset($configuration['proxy_auto_create_strategy'])) {
+            $this->proxyAutoCreateStrategy = $configuration['proxy_auto_create_strategy'];
         }
     }
 
@@ -181,7 +192,16 @@ class ServicePluginManagerConfig implements ConfigInterface
             $serviceManager->setCache($this->cache);
         }
         
-        $serviceManager->setProxyGenerator(
-                new ServiceProxyGenerator($this->proxyDir, $this->proxyNs));
+        if ($this->proxyDir) {
+            $serviceManager->setProxyDir($this->proxyDir);
+        }
+        
+        if ($this->proxyNs) {
+            $serviceManager->setProxyNs($this->proxyNs);
+        }
+        
+        if ($this->proxyAutoCreateStrategy) {
+            $serviceManager->setProxyAutoCreateStrategy($this->proxyAutoCreateStrategy);
+        }
     }
 }
