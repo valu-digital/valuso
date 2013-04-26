@@ -40,6 +40,7 @@ return [
         ],
     ],
     'valu_so' => [
+        'proxy_dir' => 'data/valuso/proxy',
         'use_main_locator' => true,
         'services' => []
     ]
