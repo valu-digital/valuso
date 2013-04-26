@@ -1,15 +1,14 @@
 <?php
 namespace ValuSo\Broker;
 
-use Zend\ServiceManager\InitializerInterface;
-
-use Zend\Cache\StorageFactory;
-
+use ReflectionClass;
 use ValuSo\Proxy\ServiceProxyGenerator;
 use ValuSo\Exception;
 use ValuSo\Annotation\AnnotationBuilder;
 use Zend\ServiceManager\AbstractPluginManager;
 use Zend\Cache\Storage\StorageInterface;
+use Zend\ServiceManager\InitializerInterface;
+use Zend\Cache\StorageFactory;
 
 /**
  * Service manager is responsible of maintaining list of registered
@@ -18,6 +17,7 @@ use Zend\Cache\Storage\StorageInterface;
  */
 class ServicePluginManager extends AbstractPluginManager
 {
+    const PROXY_AUTO_CREATE_MTIME = 'mtime';
     
     /**
      * Stack of instance names
@@ -32,27 +32,62 @@ class ServicePluginManager extends AbstractPluginManager
      * @var array
      */
     private $instanceOptions = array();
+    
+    /**
+     * Stack of "fetch as service" flags
+     *
+     * @var array
+     */
+    private $instanceAsService = array();
 
     /**
      * Cache
      * 
      * @var StorageInterface
      */
-    private $cache;
+    protected $cache;
     
     /**
      * Proxy generator
      * 
      * @var ServiceProxyGenerator
      */
-    private $proxyGenerator;
+    protected $proxyGenerator;
     
     /**
      * Annotation builder
      * 
      * @var \ValuSo\Annotation\AnnotationBuilder
      */
-    private $annotationBuilder;
+    protected $annotationBuilder;
+    
+    /**
+     * Directory for proxy files
+     * 
+     * @var string
+     */
+    protected $proxyDir = null;
+    
+    /**
+     * Proxy class namespace
+     * 
+     * @var string
+     */
+    protected $proxyNs = null;
+    
+    /**
+     * Auto-create strategy for proxy classes
+     *
+     * @var string
+     */
+    protected $proxyAutoCreateStrategy;
+    
+    /**
+     * Wrapped service instances
+     * 
+     * @var array
+     */
+    protected $wrapped = array();
     
     /**
      * Retrieve a service from the manager by name
@@ -71,25 +106,44 @@ class ServicePluginManager extends AbstractPluginManager
     {
         $this->instanceNames[]     = $name;
         $this->instanceOptions[]   = $options;
+        $this->instanceAsService[] = $fetchAsService;
         
     	$instance = parent::get($name, $options, $usePeeringServiceManagers);
     	
     	array_pop($this->instanceNames);
         array_pop($this->instanceOptions);
+        array_pop($this->instanceAsService);
         
-        $cName = $this->canonicalizeName($name);
-        
-        // Wrap instance if it is not callable
         if ($fetchAsService && !is_callable($instance)) {
-            $instance = $this->wrapService($name, $instance);
+            $cName = $this->canonicalizeName($name);
             
-            // Replace cached instance with wrapper
-            if (isset($this->instances[$cName])) {
-                $this->instances[$cName] = $instance;
+            if (isset($this->wrapped[$cName])) {
+                return $this->wrapped[$cName];
             }
+            
+            $instance = $this->wrapService($cName, $instance);
+            $this->wrapped[$cName] = $instance;
         }
         
     	return $instance;
+    }
+    
+    /**
+     * @see \Zend\ServiceManager\AbstractPluginManager::setService()
+     */
+    public function setService($name, $service, $shared = true)
+    {
+        unset($this->wrapped[$this->canonicalizeName($name)]);
+        return parent::setService($name, $service, $shared);
+    }
+    
+    /**
+     * @see \Zend\ServiceManager\ServiceManager::setInvokableClass()
+     */
+    public function setInvokableClass($name, $invokableClass, $shared = null)
+    {
+        unset($this->wrapped[$this->canonicalizeName($name)]);
+        return parent::setInvokableClass($name, $invokableClass, $shared);
     }
     
     /**
@@ -118,8 +172,23 @@ class ServicePluginManager extends AbstractPluginManager
     public function getCreationInstanceOptions()
     {
         return  sizeof($this->instanceOptions)
-        ? $this->instanceOptions[sizeof($this->instanceOptions)-1]
-        : null;
+                ? $this->instanceOptions[sizeof($this->instanceOptions)-1]
+                : null;
+    }
+    
+    /**
+     * Retrieve "fetch as service" flag for instance that is
+     * currently being initialized
+     *
+     * You may use this method in initializers.
+     *
+     * @return string|NULL
+     */
+    public function getCreationInstanceFetchAsService()
+    {
+        return  sizeof($this->instanceAsService)
+                ? $this->instanceAsService[sizeof($this->instanceAsService)-1]
+                : null;
     }
     
     /**
@@ -127,12 +196,17 @@ class ServicePluginManager extends AbstractPluginManager
      */
     public function validatePlugin($plugin)
     {
+        // Validate only services
+        if (!$this->getCreationInstanceFetchAsService()) {
+            return true;
+        }
+        
         if(is_object($plugin)){
         	return true;
         }
 
         throw new Exception\InvalidServiceException(sprintf(
-            'Controller of type %s is invalid; object expected',
+            'Service of type %s is invalid; object expected',
             gettype($plugin)
         ));
     }
@@ -180,7 +254,7 @@ class ServicePluginManager extends AbstractPluginManager
     public function getProxyGenerator()
     {
         if (!$this->proxyGenerator) {
-            $this->proxyGenerator = new ServiceProxyGenerator();
+            $this->proxyGenerator = new ServiceProxyGenerator($this->getProxyDir(), $this->getProxyNs());
         }
         
         return $this->proxyGenerator;
@@ -207,6 +281,66 @@ class ServicePluginManager extends AbstractPluginManager
     }
 
 	/**
+	 * Retrieve proxy namespace
+	 * 
+     * @return string
+     */
+    public function getProxyDir()
+    {
+        return $this->proxyDir;
+    }
+
+	/**
+	 * Retrieve proxy namespace
+	 * 
+     * @return string
+     */
+    public function getProxyNs()
+    {
+        return $this->proxyNs;
+    }
+
+	/**
+	 * Retrieve current proxy auto creation strategy (if any)
+	 * 
+     * @return string
+     */
+    public function getProxyAutoCreateStrategy()
+    {
+        return $this->proxyAutoCreateStrategy;
+    }
+
+	/**
+	 * Set current proxy auto creation strategy
+	 * 
+     * @param string $proxyAutoCreateStrategy
+     */
+    public function setProxyAutoCreateStrategy($proxyAutoCreateStrategy)
+    {
+        $this->proxyAutoCreateStrategy = $proxyAutoCreateStrategy;
+    }
+
+	/**
+	 * Set proxy directory
+	 * 
+     * @param string $proxyDir
+     */
+    public function setProxyDir($proxyDir)
+    {
+        $this->proxyDir = $proxyDir;
+    }
+
+	/**
+	 * Set proxy namespace
+	 * 
+     * @param string $proxyNs
+     */
+    public function setProxyNs($proxyNs)
+    {
+        $this->proxyNs = $proxyNs;
+    }
+
+	/**
      * Wrap service with proxy instance
      * 
      * @param string $serviceId
@@ -221,12 +355,27 @@ class ServicePluginManager extends AbstractPluginManager
             $className      = get_class($instance);
             $proxyGenerator = $this->getProxyGenerator();
             $fqcn           = $proxyGenerator->getProxyClassName($className);
+            $file           = $proxyGenerator->getProxyFilename($className);
             
-            $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
-            $config['service_id'] = $serviceId; // Overwrite any previously configured name
+            // Re-generate proxy class if original service class file has changed
+            if ($this->getProxyAutoCreateStrategy() === self::PROXY_AUTO_CREATE_MTIME && file_exists($file)) {
+                $reflection = new ReflectionClass($className);
+                $instanceFile = $reflection->getFileName();
+                
+                if (filemtime($instanceFile) > filemtime($file)) {
+                    unlink($file);
+                }
+            }
 
-            $proxyGenerator->generateProxyClass($instance, $config);
-            $proxy = $proxyGenerator->createProxyClassInstance($instance);
+            if (!file_exists($file)) {
+                $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
+                $config['service_id'] = $serviceId; // Overwrite any previously configured service ID
+                
+                $proxyGenerator->generateProxyClass($instance, $config);
+            }
+            
+            require_once $file;
+            $proxy = new $fqcn($instance);
             
             if ($this->getCache()) {
                 $this->getCache()->setItem($serviceId, $fqcn);
