@@ -125,15 +125,22 @@ class ServiceBroker{
 	    if (!$this->defaultIdentity) {
 	        $this->defaultIdentity = new ArrayObject(array());
 	        
-	        $responses = $this->execute(
-                'Identity', 
-                'getIdentity', 
-                array(), 
-                function($response){if($response instanceof ArrayAccess) return true;});
-	        
-	        if (sizeof($responses)) {
-	            $this->defaultIdentity = $responses->last();
+	        if ($this->exists('Identity')) {
+	            $responses = $this->execute(
+                    'Identity',
+                    'getIdentity',
+                    array(),
+                    function($response){if($response instanceof ArrayAccess) return true;});
+	             
+	            if (sizeof($responses)) {
+	                $this->defaultIdentity = $responses->last();
+	            }
+	            
+	            if ($this->defaultIdentity instanceof \ArrayObject) {
+	                $this->defaultIdentity->setFlags(\ArrayObject::ARRAY_AS_PROPS);
+	            }
 	        }
+	        
 	    }
 	    
 	    return $this->defaultIdentity;
