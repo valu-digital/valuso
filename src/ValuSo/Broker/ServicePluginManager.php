@@ -110,10 +110,6 @@ class ServicePluginManager extends AbstractPluginManager
         
     	$instance = parent::get($name, $options, $usePeeringServiceManagers);
     	
-    	array_pop($this->instanceNames);
-        array_pop($this->instanceOptions);
-        array_pop($this->instanceAsService);
-        
         if ($fetchAsService && !is_callable($instance)) {
             $cName = $this->canonicalizeName($name);
             
@@ -124,6 +120,10 @@ class ServicePluginManager extends AbstractPluginManager
             $instance = $this->wrapService($cName, $instance);
             $this->wrapped[$cName] = $instance;
         }
+        
+        array_pop($this->instanceNames);
+        array_pop($this->instanceOptions);
+        array_pop($this->instanceAsService);
         
     	return $instance;
     }
