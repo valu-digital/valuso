@@ -1,6 +1,10 @@
 <?php
 namespace ValuSo\Feature;
 
+use ValuSo\Stdlib\Options;
+
+use Zend\Config\Config;
+
 use ArrayObject;
 use ValuSo\Annotation as ValuService;
 
@@ -38,7 +42,7 @@ trait OptionsTrait
     /**
      * Retrieve service options
      *
-     * @return array
+     * @return \Zend\Stdlib\ParameterObjectInterface
      * 
      * @ValuSo\Exclude
      */
@@ -48,11 +52,7 @@ trait OptionsTrait
             if (isset($this->optionsClass)) {
                 $this->options = new $this->optionsClass(array());
             } else {
-                $this->options = new ArrayObject(array());
-            }
-            
-            if ($this->options instanceof \ArrayObject) {
-                $this->options->setFlags(\ArrayObject::ARRAY_AS_PROPS);
+                $this->options = new Options(array());
             }
         }
     
