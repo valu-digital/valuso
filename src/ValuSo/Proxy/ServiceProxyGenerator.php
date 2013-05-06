@@ -522,6 +522,9 @@ class ServiceProxyGenerator
             '__matchContext',
             [new ParameterGenerator('command', '\ValuSo\Command\CommandInterface'), 'contexts'],
             MethodGenerator::FLAG_PRIVATE,
+            'if ($command->getContext() === "native") {'. "\n" .
+            '    return true;'. "\n" .
+            '}'. "\n" .
             'foreach($contexts as $context) { '. "\n" .
             '    if ($context === $command->getContext()) {'. "\n" .
             '        return true;'. "\n" .
