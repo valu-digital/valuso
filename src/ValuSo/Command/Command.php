@@ -204,9 +204,9 @@ class Command
     /**
      * Set identity of the user executing this command
      *
-     * @param \ArrayAccess $identity
+     * @param ArrayAccess $identity
      */
-    public function setIdentity(\ArrayAccess $identity)
+    public function setIdentity(ArrayAccess $identity)
     {
         $this->identity = $identity;
     }
