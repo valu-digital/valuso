@@ -94,10 +94,12 @@ class UploadListenerAggregate implements ListenerAggregateInterface
      * that the PHP upload data is replaced by filename(s)
      * in local filesystem.
      * 
-     * @param CommandInterface $command
+     * @param \ValuSo\Broker\ServiceEvent $event
      */
-    public function prepareUpload(CommandInterface $command)
+    public function prepareUpload(ServiceEvent $event)
     {
+        $command = $event->getCommand();
+        
         if (strpos($command->getContext(), 'http') !== 0) {
             return;
         }
