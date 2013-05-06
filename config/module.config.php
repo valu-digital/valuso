@@ -26,7 +26,7 @@ return [
                         'operation' => '[a-zA-Z][a-zA-Z0-9_-]*',
                     ],
                     'defaults' => [
-                        'controller' => 'valuapp-service-controller',
+                        'controller' => 'ValuSoServiceController',
                         'action' => 'broker',
                         '_acl' => [
                             'enabled' => true,
