@@ -127,8 +127,13 @@ trait OptionsTrait
      */
     public function setConfig($config)
     {
-        if(is_string($config) && file_exists($config)){
-            $config = \Zend\Config\Factory::fromFile($config);
+        if(is_string($config)){
+            if (file_exists($config)) {
+                $config = \Zend\Config\Factory::fromFile($config);
+            } else {
+                throw new \InvalidArgumentException(
+                    sprintf('Unable to read configurations from file %s',$config));
+            }
         }
     
         if(!is_array($config) && !($config instanceof \Traversable)){
