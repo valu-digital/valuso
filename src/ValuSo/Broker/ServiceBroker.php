@@ -275,10 +275,6 @@ class ServiceBroker{
             $argv,
 	        $context);
 	    
-	    if ($this->getDefaultIdentity()) {
-	        $command->setIdentity($this->getDefaultIdentity());
-	    }
-	    
 	    return $this->dispatch($command, $callback);
 	}
 	
@@ -314,6 +310,10 @@ class ServiceBroker{
 	 * @return ResponseCollection|null
 	 */
 	public function dispatch(CommandInterface $command, $callback = null){
+	    
+	    if (!$command->getIdentity() && $this->getDefaultIdentity()) {
+            $command->setIdentity($this->getDefaultIdentity());
+	    }
 	    
 	    $service     = $command->getService();
 	    $operation   = $command->getOperation();
