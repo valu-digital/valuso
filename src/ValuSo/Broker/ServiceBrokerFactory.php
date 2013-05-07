@@ -74,13 +74,11 @@ class ServiceBrokerFactory implements FactoryInterface
      * @see \Zend\ServiceManager\FactoryInterface::createService()
      * @return ServiceBroker
      */
-
-    
-    
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        $config    = $serviceLocator->get('Config');
-        $config    = empty($config['valu_so']) ? [] : $config['valu_so'];
+        $evm    = $serviceLocator->get('EventManager');
+        $config = $serviceLocator->get('Config');
+        $config = empty($config['valu_so']) ? [] : $config['valu_so'];
         
         $cacheConfig = isset($config['cache']) ? $config['cache'] : null;
         
@@ -131,6 +129,8 @@ class ServiceBrokerFactory implements FactoryInterface
         
         $broker = new ServiceBroker();
         $broker->setLoader($loader);
+        
+        $evm->trigger('servicebroker.init', $broker);
         
         return $broker;
     }
