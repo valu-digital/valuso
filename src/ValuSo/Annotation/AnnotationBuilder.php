@@ -107,11 +107,16 @@ class AnnotationBuilder implements EventManagerAwareInterface
         if ($serviceSpec['exclude']) {
             return;
         }
-
+        
         foreach ($class->getMethods() as $method) {
             
             // Skip method if it is not owned by this class
             if ($method->getDeclaringClass()->getName() !== $class->getName()) {
+                continue;
+            }
+            
+            // Skip method declared in Trait due to ZF2 bug
+            if ($this->isDeclaredInTrait($method)) {
                 continue;
             }
             
@@ -280,5 +285,14 @@ class AnnotationBuilder implements EventManagerAwareInterface
         // Configure operation (overwrites any existing configurations
         // for this operation)
         $serviceSpec['operations'][$method->getName()] = $operationSpec;
+    }
+    
+    protected function isDeclaredInTrait(MethodReflection $method)
+    {
+        if ($method->getDeclaringClass()->getFileName() !== $method->getFileName()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
