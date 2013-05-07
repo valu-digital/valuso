@@ -301,7 +301,7 @@ class ServiceProxyGenerator
             }
             
             // Generate code for context testing
-            $contexts = $this->getOperationConfig($methodName, 'contexts', '*');
+            $contexts = $this->getOperationConfig($methodName, 'contexts', 'native');
             
             if ($contexts !== '*') {
                 $contexts = (array) $contexts;
