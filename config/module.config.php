@@ -12,7 +12,7 @@ return [
     ],
     'controller_plugins' => [
         'invokables' => [
-            'service-broker' => 'ValuSo\Controller\Plugin\ServiceBroker',
+            'service-broker' => 'ValuSo\Controller\Plugin\ServiceBrokerPlugin',
         ],
     ],
     'router' => [
@@ -20,24 +20,19 @@ return [
             'valuso-rpc' => [
                 'type' => 'Zend\\Mvc\\Router\\Http\\Segment',
                 'options' => [
-                    'route' => '/api/rpc/[/:service[/:operation]]',
+                    'route' => '/api/rpc[/:service[/:operation]]',
                     'constraints' => [
                         'service' => '[a-zA-Z][\\.a-zA-Z0-9_-]*',
                         'operation' => '[a-zA-Z][a-zA-Z0-9_-]*',
                     ],
                     'defaults' => [
                         'controller' => 'ValuSoServiceController',
-                        'action' => 'broker',
-                        '_acl' => [
-                            'enabled' => true,
-                        ],
+                        'action' => 'http',
+                        '_authenticate' => true
                     ],
                 ],
             ],
-        ],
-        'map' => [
-            'serviceBroker' => 'ValuSo\Controller\Plugin\ServiceBroker',
-        ],
+        ]
     ],
     'valu_so' => [
         'proxy_dir' => 'data/valuso/proxy',
