@@ -1,6 +1,7 @@
 <?php
 namespace ValuSo\Controller;
 
+use ValuSo\Command\Command;
 use ValuSo\Exception\OperationNotFoundException;
 use ValuSo\Exception\ServiceNotFoundException;
 use ValuSo\Exception\NotFoundException;
@@ -153,12 +154,12 @@ class ServiceController extends AbstractActionController
 	 * @return Response
 	 */
 	public function httpAction(){
-	    
 	    $status		= self::STATUS_SUCCESS;
 	    $responses	= array();
 	    $exception	= null;
 	    $data       = null;
-
+        $debug      = $this->getRouteParam('debug', false); 
+        
         try {
             $service	= $this->fetchService();
             $operation	= $service ? $this->fetchOperation() : false;
@@ -200,7 +201,7 @@ class ServiceController extends AbstractActionController
                     $service, 
                     $operation, 
                     $params, 
-                    ServiceBroker::CONTEXT_HTTP);
+                    Command::CONTEXT_HTTP);
             
         } catch (PermissionDeniedException $exception) {
             $status = self::STATUS_PERMISSION_DENIED;
@@ -213,6 +214,10 @@ class ServiceController extends AbstractActionController
         // Log error
 	    if ($exception) {
 	        error_log($exception->getMessage() . ' (' . $exception->getFile().':'.$exception->getLine().')');
+	        
+	        if ($debug) {
+	            throw $exception;
+	        }
 	    }
     
 		return $this->prepareHttpResponse(
@@ -422,9 +427,9 @@ class ServiceController extends AbstractActionController
 	/**
 	 * @todo Does ZF provide a more convenient approach?
 	 */
-	protected function getRouteParam($param)
+	protected function getRouteParam($param, $default = null)
 	{
-	    return $this->getEvent()->getRouteMatch()->getParam($param);
+	    return $this->getEvent()->getRouteMatch()->getParam($param, $default);
 	}
 	
 	/**
