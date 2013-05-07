@@ -1,6 +1,7 @@
 <?php
 namespace ValuSo\Broker;
 
+use ValuSo\Exception\AnnotationException;
 use ReflectionClass;
 use ValuSo\Proxy\ServiceProxyGenerator;
 use ValuSo\Exception;
@@ -368,7 +369,13 @@ class ServicePluginManager extends AbstractPluginManager
             }
 
             if (!file_exists($file)) {
-                $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
+                try {
+                    $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
+                } catch(\Exception $e) {
+                    throw new AnnotationException(
+                        sprintf('Unable to parse annotations for service %s (%s). Reason: %s', $serviceId, $file, $e->getMessage()));
+                }
+                
                 $config['service_id'] = $serviceId; // Overwrite any previously configured service ID
                 
                 $proxyGenerator->generateProxyClass($instance, $config);
