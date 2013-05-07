@@ -1,6 +1,8 @@
 <?php
 namespace ValuSoTest\Broker;
 
+use Zend\EventManager\EventManager;
+
 use ValuSoTest\TestAsset\ClosureService;
 
 use Zend\ServiceManager\ServiceManager;
@@ -47,60 +49,55 @@ class ServiceBrokerFactoryTest extends PHPUnit_Framework_TestCase
     
     public function testCreateEmptyServiceBroker()
     {
-        $locator = new ServiceManager();
-        $locator->setService('Config', [
-            'valu_so' => [
-                
-            ]        
-        ]);
+        $sm = $this->configureServiceManager();
+        $this->assertInstanceOf('ValuSo\Broker\ServiceBroker', $this->serviceBrokerFactory->createService($sm));
+    }
+    
+    public function testServiceBrokerFactoryTriggersInitEvent()
+    {
+        $triggered = false;
+        $sm = $this->configureServiceManager();
+        $evm = $sm->get('EventManager');
+        $evm->attach('servicebroker.init', function() use(&$triggered) {$triggered = true;});
         
-        $this->assertInstanceOf('ValuSo\Broker\ServiceBroker', $this->serviceBrokerFactory->createService($locator));
+        $this->assertInstanceOf('ValuSo\Broker\ServiceBroker', $this->serviceBrokerFactory->createService($sm));
+        $this->assertTrue($triggered);
     }
     
     public function testCreateServiceBrokerWithOneClosureService()
     {
-        $locator = new ServiceManager();
-        $locator->setService('Config', [
-            'valu_so' => [
-                'services' => [
-                    'testid' => ['name' => 'Test.Service', 'service' => new ClosureService(function(){return true;})]
-                ] 
-            ]
-        ]);
+        $sm = $this->configureServiceManager(['testid' => ['name' => 'Test.Service', 'service' => new ClosureService(function(){return true;})]]);
     
-        $service = $this->serviceBrokerFactory->createService($locator);
+        $service = $this->serviceBrokerFactory->createService($sm);
         $this->assertTrue($service->execute('Test.Service', 'run')->first());
     }
     
     public function testCreateServiceBrokerWithOneClassService()
     {
-        $locator = new ServiceManager();
-        $locator->setService('Config', [
-            'valu_so' => [
-                'services' => [
-                    'testid' => ['name' => 'Test.Service', 'service' => self::CLOSURE_SERVICE_CLASS]
-                ]
-            ]
-        ]);
-    
-        $service = $this->serviceBrokerFactory->createService($locator);
+        $sm = $this->configureServiceManager(['testid' => ['name' => 'Test.Service', 'service' => self::CLOSURE_SERVICE_CLASS]]);
+        $service = $this->serviceBrokerFactory->createService($sm);
     
         $this->assertEquals('executed', $service->execute('Test.Service', 'run')->first());
     }
     
     public function testCreateServiceBrokerWithOneFactoryService()
     {
-        $locator = new ServiceManager();
-        $locator->setService('Config', [
-            'valu_so' => [
-                'services' => [
-                    'testid' => ['name' => 'Test.Service', 'factory' => self::CLOSURE_SERVICE_FACTORY]
-                ]
-            ]
-        ]);
-    
-        $service = $this->serviceBrokerFactory->createService($locator);
+        $sm = $this->configureServiceManager(['testid' => ['name' => 'Test.Service', 'factory' => self::CLOSURE_SERVICE_FACTORY]]);
+        $service = $this->serviceBrokerFactory->createService($sm);
     
         $this->assertEquals('executed', $service->execute('Test.Service', 'run')->first());
+    }
+    
+    private function configureServiceManager($services = array())
+    {
+        $sm = new ServiceManager();
+        $sm->setService('Config', [
+            'valu_so' => [
+                'services' => $services
+            ]
+        ]);
+        $sm->setService('EventManager', new EventManager());
+        
+        return $sm;
     }
 }

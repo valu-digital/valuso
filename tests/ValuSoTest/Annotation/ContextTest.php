@@ -105,7 +105,7 @@ class ContextTest extends AbstractTestCase
         $command = new Command();
         $command->setOperation('operation3');
         $command->setParam('returnValue', true);
-        $command->setContext('native');
+        $command->setContext('cli');
         
         $this->serviceProxy->__invoke($command);
     }
