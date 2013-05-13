@@ -1,10 +1,12 @@
 <?php
 namespace ValuSo\Broker;
 
+use ValuSo\Util\EventManagerConfigurator;
 use ValuSo\Broker\ServiceBroker;
 use ValuSo\Broker\ServiceLoader;
 use Zend\Cache\Storage\StorageInterface;
 use Zend\Mvc\Service\ServiceManagerConfig;
+use Zend\EventManager\ListenerAggregateInterface;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 use Zend\Cache\StorageFactory;
@@ -130,7 +132,15 @@ class ServiceBrokerFactory implements FactoryInterface
         $broker = new ServiceBroker();
         $broker->setLoader($loader);
         
-        $evm->trigger('servicebroker.init', $broker);
+        // Attach configured event listeners
+        if (!empty($config['listeners'])) {
+            EventManagerConfigurator::configure(
+                $broker->getEventManager(), 
+                $serviceLocator, 
+                $config['listeners']);
+        }
+        
+        $evm->trigger('valu_so.servicebroker.init', $broker);
         
         return $broker;
     }

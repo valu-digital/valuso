@@ -1,8 +1,7 @@
 <?php
 namespace ValuSo\Annotation;
 
-use ValuSo\Annotation\Exception\InvalidListenerException;
-use Zend\EventManager\ListenerAggregateInterface;
+use ValuSo\Util\EventManagerConfigurator;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 use Zend\Code\Annotation\Parser;
@@ -58,21 +57,10 @@ class AnnotationBuilderFactory implements FactoryInterface
         
         // Attach listeners for custom annotations
         if (!empty($config['annotation_listeners'])) {
-            foreach ($config['annotation_listeners'] as $key => $value) {
-                
-                if ($value instanceof ListenerAggregateInterface) {
-                    $aggregate = $value;
-                } else {
-                    $aggregate = $serviceLocator->get($value);
-                }
-                
-                if ($aggregate instanceof ListenerAggregateInterface) {
-                    $annotationBuilder->getEventManager()->attachAggregate($aggregate);
-                } else {
-                    throw new InvalidListenerException(
-                        sprintf("Listener for service ID %s doesn't implement ListenerAggregateInterface", $value));
-                }
-            }    
+            EventManagerConfigurator::configure(
+                $annotationBuilder->getEventManager(), 
+                $serviceLocator, 
+                $config['annotation_listeners']);
         }
         
         return $annotationBuilder;
