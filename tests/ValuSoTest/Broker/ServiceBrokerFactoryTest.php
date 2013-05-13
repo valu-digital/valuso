@@ -58,7 +58,7 @@ class ServiceBrokerFactoryTest extends PHPUnit_Framework_TestCase
         $triggered = false;
         $sm = $this->configureServiceManager();
         $evm = $sm->get('EventManager');
-        $evm->attach('servicebroker.init', function() use(&$triggered) {$triggered = true;});
+        $evm->attach('valu_so.servicebroker.init', function() use(&$triggered) {$triggered = true;});
         
         $this->assertInstanceOf('ValuSo\Broker\ServiceBroker', $this->serviceBrokerFactory->createService($sm));
         $this->assertTrue($triggered);
