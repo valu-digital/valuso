@@ -1,5 +1,5 @@
 <?php
-namespace ValuSo\Annotation\Exception;
+namespace ValuSo\Util;
 
 use Exception;
 
