@@ -2,7 +2,6 @@
 namespace ValuSo\Annotation;
 
 use ValuSo\Exception\AnnotationException;
-
 use ValuSo\Annotation\Listener\ServiceAnnotationsListener;
 use ValuSo\Annotation\Listener\OperationAnnotationsListener;
 use ValuSo\Exception;
@@ -66,7 +65,7 @@ class AnnotationBuilder implements EventManagerAwareInterface
             }
         }
     
-        $serviceSpec       = new ArrayObject();
+        $serviceSpec = new ArrayObject();
         $serviceSpec['operations'] = new ArrayObject();
     
         $reflection  = new ClassReflection($entity);

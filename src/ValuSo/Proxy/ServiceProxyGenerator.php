@@ -594,6 +594,13 @@ class ServiceProxyGenerator
                             }
                         }
                         
+                        // Overwrite with params
+                        if (isset($specs['params']) && is_array($specs['params']) && !empty($specs['params'])) {
+                            foreach ($specs['params'] as $name => $value) {
+                                $code .= '$__event_params["'.$name.'"] = "'.$value.'";' . "\n";
+                            }
+                        }
+                        
                         $paramsExist = true;
                     }
                     

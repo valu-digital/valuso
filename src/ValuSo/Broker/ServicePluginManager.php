@@ -267,7 +267,8 @@ class ServicePluginManager extends AbstractPluginManager
     public function getAnnotationBuilder()
     {
         if (!$this->annotationBuilder) {
-            $this->setAnnotationBuilder(new AnnotationBuilder());
+            $this->setAnnotationBuilder(
+                $this->getServiceLocator()->get('valu_so.annotation_builder'));
         }
         
         return $this->annotationBuilder;

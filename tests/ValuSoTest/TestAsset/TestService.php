@@ -47,7 +47,7 @@ class TestService extends AbstractService implements ProxyAwareInterface
     
     /**
      * @Annotation\Trigger("pre");
-     * @Annotation\Trigger({"type":"post","args":{"job", "delayed"},"name":"post.<service>.run"})
+     * @Annotation\Trigger({"type":"post","args":{"job", "delayed"},"name":"post.<service>.run","params":{"custom":"value"}})
      * @return string
      */
     public function run($job = null, $delayed = false, $debug = false)

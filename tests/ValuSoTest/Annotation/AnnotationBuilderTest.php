@@ -66,8 +66,8 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
         
         $this->assertEquals(
             ['events' => [
-                ['type' => 'pre', 'name' => null, 'args' => null],    
-                ['type' => 'post', 'name' => 'post.<service>.run', 'args' => ['job', 'delayed']],   
+                ['type' => 'pre', 'name' => null, 'args' => null, 'params' => null],    
+                ['type' => 'post', 'name' => 'post.<service>.run', 'args' => ['job', 'delayed'], 'params' => ['custom' => 'value']],   
             ], 'context' => '*', 'aliases' => [], 'inherit' => false],
             $specs['operations']['run']->getArrayCopy()
         );
@@ -83,8 +83,8 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
     
         $this->assertEquals(
             [
-                ['type' => 'pre', 'name' => null, 'args' => null],
-                ['type' => 'post', 'name' => null, 'args' => null],
+                ['type' => 'pre', 'name' => null, 'args' => null, 'params' => null],
+                ['type' => 'post', 'name' => null, 'args' => null, 'params' => null],
             ],
             $specs['operations']['deleteAll']['events']
         );
@@ -148,7 +148,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
         
         $this->assertEquals(
             [
-                ['type' => 'pre', 'name' => null, 'args' => null],
+                ['type' => 'pre', 'name' => null, 'args' => null, 'params' => null],
             ],
             $specs['operations']['sharedOperation']['events']
         );
@@ -164,8 +164,8 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
     
         $this->assertEquals(
             [
-                ['type' => 'pre', 'name' => null, 'args' => null],
-                ['type' => 'post', 'name' => null, 'args' => null],
+                ['type' => 'pre', 'name' => null, 'args' => null, 'params' => null],
+                ['type' => 'post', 'name' => null, 'args' => null, 'params' => null],
             ],
             $specs['operations']['templateOperation']['events']
         );

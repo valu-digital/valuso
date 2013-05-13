@@ -26,10 +26,10 @@ class TriggerTest extends AbstractTestCase
         $this->serviceProxy = $this->generateProxyService([
             'operations' => [
                 'operation1' => [
-                    'events' => [['type' => 'pre', 'name' => 'preevent', 'args' => null]]
+                    'events' => [['type' => 'pre', 'name' => 'preevent', 'args' => null, 'params' => null]]
                 ],
                 'operation2' => [
-                    'events' => [['type' => 'post', 'name' => 'postevent', 'args' => null]]
+                    'events' => [['type' => 'post', 'name' => 'postevent', 'args' => null, 'params' => null]]
                 ]
             ]        
         ]);
@@ -54,13 +54,18 @@ class TriggerTest extends AbstractTestCase
     {
         $this->triggerAnnotation = new TriggerAnnotation(['value' => 'pre']);
         $this->assertEquals(
-                ['type' => 'pre', 'name' => null, 'args' => null], 
+                ['type' => 'pre', 'name' => null, 'args' => null, 'params' => null], 
                 $this->triggerAnnotation->getEventDescription());
     }
     
     public function testGetEventDescriptionFromArray()
     {
-        $specs = ['type' => 'pre', 'name' => 'eventname', 'args' => ['arg1' => 'value1']];
+        $specs = [
+            'type' => 'pre', 
+            'name' => 'eventname', 
+            'args' => ['arg1'], 
+            'params' => ['arg2' => 'value']
+        ];
         
         $this->triggerAnnotation = new TriggerAnnotation(['value' => $specs]);
         $this->assertEquals(

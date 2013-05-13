@@ -36,7 +36,8 @@ class Trigger extends AbstractArrayOrStringAnnotation
         $event = array(
             'type' => null,
             'name' => null,
-            'args' => null
+            'args' => null,
+            'params' => null
         );
         
         if (is_string($this->value)) {
@@ -45,6 +46,7 @@ class Trigger extends AbstractArrayOrStringAnnotation
             $event['type'] = isset($this->value['type']) ? $this->value['type'] : null;
             $event['name'] = isset($this->value['name']) ? $this->value['name'] : null;
             $event['args'] = isset($this->value['args']) ? $this->value['args'] : null;
+            $event['params'] = isset($this->value['params']) ? $this->value['params'] : null;
         }
         
         return $event;

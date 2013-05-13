@@ -3,6 +3,7 @@ return [
     'service_manager' => [
         'factories' => [
             'ServiceBroker' => 'ValuSo\Broker\ServiceBrokerFactory',
+            'valu_so.annotation_builder' => 'ValuSo\Annotation\AnnotationBuilderFactory',
         ]
     ],
     'controllers' => [

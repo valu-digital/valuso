@@ -48,6 +48,7 @@ class AliasTest extends AbstractTestCase
         $command = new Command();
         $command->setOperation('operationAlias');
         $command->setParam('returnValue', true);
+        $command->setContext('native');
         
         $this->assertTrue(
             $serviceProxy->__invoke($command));
