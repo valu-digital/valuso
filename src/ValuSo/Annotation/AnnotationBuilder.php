@@ -96,7 +96,7 @@ class AnnotationBuilder implements EventManagerAwareInterface
         // Each class must define its own exclusion pattern
         $serviceSpec['exclude_patterns'] = array();
         $serviceSpec['exclude'] = false;
-        $serviceSpec['context'] = '*';
+        $serviceSpec['contexts'] = array('native');
         
         if ($annotations instanceof AnnotationCollection) {
             $this->configureService($annotations, $class, $serviceSpec);
@@ -132,7 +132,6 @@ class AnnotationBuilder implements EventManagerAwareInterface
                 
                 throw $e;
             }
-            
             
             if (!$annotations instanceof AnnotationCollection) {
                 $annotations = new AnnotationCollection();
@@ -238,9 +237,14 @@ class AnnotationBuilder implements EventManagerAwareInterface
     protected function configureOperation(AnnotationCollection $annotations, 
                                           MethodReflection $method, ArrayObject $serviceSpec)
     {
+        // Skip if no annotations are present
+        if (!$annotations->count()) {
+            return;
+        }
+        
         $operationSpec = new ArrayObject(array(
             'events' => array(), 
-            'context' => $serviceSpec['context'],
+            'contexts' => $serviceSpec['contexts'],
             'aliases' => array(),
             'inherit' => false,
             'exclude' => null)
@@ -250,9 +254,9 @@ class AnnotationBuilder implements EventManagerAwareInterface
         
         $event = new Event();
         $event->setParams(array(
-                'name'        => $method->getName(),
-                'serviceSpec' => $serviceSpec,
-                'operationSpec' => $operationSpec
+            'name'        => $method->getName(),
+            'serviceSpec' => $serviceSpec,
+            'operationSpec' => $operationSpec
         ));
         
         foreach ($annotations as $annotation) {
