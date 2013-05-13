@@ -99,7 +99,8 @@ class ServiceProxyGenerator
             'methods' => $this->generateMethods($reflection),
             'properties' => [
                 new PropertyGenerator('__wrappedObject', null, PropertyGenerator::FLAG_PUBLIC),
-                new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE)
+                new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE),
+                new PropertyGenerator('__command', null, PropertyGenerator::FLAG_PRIVATE)
             ]
         ]);
         
@@ -282,6 +283,9 @@ class ServiceProxyGenerator
         'if (!in_array($command->getOperation(), ["' . implode('","', $methodAliases) . '"])) {'. "\n" .
         '    $this->__operationNotFound($command);' . "\n" .
         '}' . "\n\n";
+        
+        // Store command to private property
+        $invokeImpl .= '$this->__command = $command;' . "\n\n";
         
         // Define injector for identity
         $invokeImpl .=
@@ -597,19 +601,21 @@ class ServiceProxyGenerator
                         // Overwrite with params
                         if (isset($specs['params']) && is_array($specs['params']) && !empty($specs['params'])) {
                             foreach ($specs['params'] as $name => $value) {
-                                $code .= '$__event_params["'.$name.'"] = "'.$value.'";' . "\n";
+                                $code .= '$__event_params["'.$name.'"] = '.var_export($value, true).';' . "\n";
                             }
                         }
                         
                         $paramsExist = true;
                     }
                     
+                    $code .= '$__event_params["__command"] = $this->__command;' . "\n";
+                    
                     if ($type == self::EVENT_POST && !$responseInjected) {
                         $code .= '$__event_params["__response"] = $response;' . "\n";
                         $responseInjected = true;
                     }
                     
-                    $code .= '$this->getEventManager()->trigger("'.$specs['name'].'", $this, $__event_params);' . "\n";
+                    $code .= '$this->getEventManager()->trigger("'.$specs['name'].'", $this->__wrappedObject, $__event_params);' . "\n";
                 }
             }
             
