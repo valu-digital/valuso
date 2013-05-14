@@ -1,8 +1,6 @@
 <?php
 namespace ValuSo\Feature;
 
-use Valu\Service\Invoker\InvokerInterface;
-
 /**
  * Proxy aware interface
  * 

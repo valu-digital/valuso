@@ -27,7 +27,7 @@ class ServiceLoader{
 	/**
 	 * Service plugin manager
 	 * 
-	 * @var \Valu\Service\ServicePluginManager
+	 * @var \ValuSo\Broker\ServicePluginManager
 	 */
 	private $servicePluginManager = null;
 	

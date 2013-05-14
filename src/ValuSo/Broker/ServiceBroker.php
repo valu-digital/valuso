@@ -73,7 +73,7 @@ class ServiceBroker{
 	 * 
 	 * @param array|Traversable $options
 	 * @throws \InvalidArgumentException
-	 * @return \Valu\Service\ServiceBroker
+	 * @return \ValuSo\Broker\ServiceBroker
 	 */
 	public function setOptions($options)
 	{

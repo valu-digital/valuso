@@ -24,10 +24,10 @@ class ServiceBrokerPlugin extends AbstractPlugin
      */
     protected $serviceBroker;
     
-    public function __construct(Broker $broker = null)
+    public function __construct(ServiceBroker $serviceBroker = null)
     {
-        if($broker !== null){
-        	$this->setBroker($broker);
+        if($serviceBroker !== null){
+        	$this->setServiceBroker($serviceBroker);
         }
     }
     
@@ -59,7 +59,7 @@ class ServiceBrokerPlugin extends AbstractPlugin
     /**
      * Set service broker instance
      * 
-     * @param Broker $broker
+     * @param \ValuSo\Broker\ServiceBroker $broker
      */
     public function setServiceBroker(ServiceBroker $serviceBroker)
     {
