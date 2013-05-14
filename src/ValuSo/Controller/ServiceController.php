@@ -8,6 +8,7 @@ use ValuSo\Exception\NotFoundException;
 use ValuSo\Exception\PermissionDeniedException;
 use ValuSo\Exception\ServiceException;
 use ValuSo\Broker\ServiceBroker;
+use ValuSo\Json\Encoder as JsonEncoder;
 use Zend\EventManager\ResponseCollection;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\JsonModel;
@@ -345,7 +346,7 @@ class ServiceController extends AbstractActionController
 	            }
 	        }
 	        
-	        $response->setContent(Json::encode($responseModel));
+	        $response->setContent(JsonEncoder::encode($responseModel, true));
 	        return $response;
 	    }
 	}
@@ -371,7 +372,7 @@ class ServiceController extends AbstractActionController
 	    }
 	    
 	    if (is_array($data) || is_object($data)) {
-	        $json = Json::encode($data);
+	        $json = JsonEncoder::encode($data, true);
 	        return Json::prettyPrint($json) . "\n";
 	    } else {
 	        return $data;
