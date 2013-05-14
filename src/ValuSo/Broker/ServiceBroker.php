@@ -406,6 +406,7 @@ class ServiceBroker{
 	    $event = new ServiceEvent();
 	    $event->setName($name);
 	    $event->setCommand($command);
+	    $event->setParams($command->getParams());
 	    
 	    return $event;
 	}
