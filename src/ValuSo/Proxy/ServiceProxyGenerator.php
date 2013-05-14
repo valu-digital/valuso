@@ -289,7 +289,7 @@ class ServiceProxyGenerator
         
         // Define injector for identity
         $invokeImpl .=
-        'if ($command->getIdentity() && $this->__wrappedObject instanceof \ValuSo\Feature\IdentityAwareInterface) {'.
+        'if ($command->getIdentity() && $this->__wrappedObject instanceof \ValuSo\Feature\IdentityAwareInterface) {'. "\n" .
         '    $this->__wrappedObject->setIdentity($command->getIdentity());' . "\n".
         '}' . "\n\n";
         
@@ -607,15 +607,16 @@ class ServiceProxyGenerator
                         
                         $paramsExist = true;
                     }
-                    
-                    $code .= '$__event_params["__command"] = $this->__command;' . "\n";
-                    
+ 
                     if ($type == self::EVENT_POST && !$responseInjected) {
                         $code .= '$__event_params["__response"] = $response;' . "\n";
                         $responseInjected = true;
                     }
                     
-                    $code .= '$this->getEventManager()->trigger("'.$specs['name'].'", $this->__wrappedObject, $__event_params);' . "\n";
+                    $code .= '$__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
+                    $code .= '$__event->setCommand($this->__command);' . "\n";
+                    
+                    $code .= '$this->getEventManager()->trigger($__event);' . "\n";
                 }
             }
             
