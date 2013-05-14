@@ -38,9 +38,11 @@ class ServiceEvent
     public function setCommand(CommandInterface $command)
     {
         $this->command = $command;
-        
-        // Both event and the command share same params
-        $this->setParams($command->getParams());
+
+        // Use command parameters if event doesn't have parameters
+        if (empty($this->params)) {
+            $this->setParams($command->getParams());
+        }
     }
     
     /**
