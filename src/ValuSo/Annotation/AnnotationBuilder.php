@@ -237,8 +237,9 @@ class AnnotationBuilder implements EventManagerAwareInterface
     protected function configureOperation(AnnotationCollection $annotations, 
                                           MethodReflection $method, ArrayObject $serviceSpec)
     {
-        // Skip if no annotations are present
-        if (!$annotations->count()) {
+        // Skip if no annotations are present and operations
+        // has previously been configured
+        if (!$annotations->count() && isset($serviceSpec['operations'][$method->getName()])) {
             return;
         }
         
