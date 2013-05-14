@@ -182,8 +182,7 @@ class CommandManager
                 }
             }
             
-            // Trigger the listener's callback, and push its result onto the
-            // response collection
+            // Push response into collection
             $responses->push($response);
             
             // If the event was asked to stop propagating, do so
