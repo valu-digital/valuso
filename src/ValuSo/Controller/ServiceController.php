@@ -12,8 +12,6 @@ use Zend\EventManager\ResponseCollection;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\JsonModel;
 use Zend\Json\Json;
-use Zend\Json\Decoder as JsonDecoder;
-use Zend\Json\Encoder as JsonEncoder;
 use Zend\Http\Header\HeaderInterface;
 use Zend\Http\PhpEnvironment\Response;
 use Zend\Console\Request as ConsoleRequest;
@@ -191,7 +189,7 @@ class ServiceController extends AbstractActionController
             // Merge params with special q parameter
             if (isset($params['q'])) {
                 $params = array_merge(
-                    JsonDecoder::decode($params['q'],
+                    Json::decode($params['q'],
                     Json::TYPE_ARRAY), $params);
             
                 unset($params['q']);
@@ -243,7 +241,7 @@ class ServiceController extends AbstractActionController
 	    // Check verbose flag
 	    $verbose = $request->getParam('verbose') || $request->getParam('v');
 	    
-	    $params = JsonDecoder::decode(
+	    $params = Json::decode(
             $query,
             Json::TYPE_ARRAY
         );
@@ -347,7 +345,7 @@ class ServiceController extends AbstractActionController
 	            }
 	        }
 	        
-	        $response->setContent(JsonEncoder::encode($responseModel));
+	        $response->setContent(Json::encode($responseModel));
 	        return $response;
 	    }
 	}
@@ -373,7 +371,7 @@ class ServiceController extends AbstractActionController
 	    }
 	    
 	    if (is_array($data) || is_object($data)) {
-	        $json = JsonEncoder::encode($data);
+	        $json = Json::encode($data);
 	        return Json::prettyPrint($json) . "\n";
 	    } else {
 	        return $data;
