@@ -394,9 +394,7 @@ class ServicePluginManager extends AbstractPluginManager
             require_once $file;
             $proxy = new $fqcn($instance);
             
-            if ($this->getCache()) {
-                $this->getCache()->setItem(self::CACHE_ID_PREFIX . $serviceId, $fqcn);
-            }
+            $this->getCache()->setItem(self::CACHE_ID_PREFIX . $serviceId, $fqcn);
             
             // Run initializers for the proxy class
             foreach ($this->initializers as $initializer) {
