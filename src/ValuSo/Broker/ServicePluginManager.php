@@ -20,6 +20,10 @@ class ServicePluginManager extends AbstractPluginManager
 {
     const PROXY_AUTO_CREATE_MTIME = 'mtime';
     
+    const PROXY_AUTO_CREATE_ALWAYS = 'always';
+    
+    const CACHE_ID_PREFIX = 'valu_so_proxy_';
+    
     /**
      * Stack of instance names
      * 
@@ -231,7 +235,7 @@ class ServicePluginManager extends AbstractPluginManager
     {
         if (!$this->cache) {
             $this->setCache(
-                StorageFactory::factory(['adapter' => 'array']));
+                StorageFactory::factory(['adapter' => 'memory']));
         }
         
         return $this->cache;
@@ -349,9 +353,14 @@ class ServicePluginManager extends AbstractPluginManager
      * @param object $instance
      * @return object
      */
-    protected function wrapService($serviceId, $instance)
+    public function wrapService($serviceId, $instance)
     {
-        if (($fqcn = $this->getCache()->getItem($serviceId)) && class_exists($fqcn)) {
+        $serviceId = $this->canonicalizeName($serviceId);
+        
+        if (($fqcn = $this->getCache()->getItem(self::CACHE_ID_PREFIX . $serviceId)) 
+             && class_exists($fqcn) 
+             && $this->getProxyAutoCreateStrategy() !== self::PROXY_AUTO_CREATE_ALWAYS) {
+            
             return new $fqcn($instance);
         } else {
             $className      = get_class($instance);
@@ -369,7 +378,7 @@ class ServicePluginManager extends AbstractPluginManager
                 }
             }
 
-            if (!file_exists($file)) {
+            if (!file_exists($file) || $this->getProxyAutoCreateStrategy() === self::PROXY_AUTO_CREATE_ALWAYS) {
                 try {
                     $config = $this->getAnnotationBuilder()->getServiceSpecification($instance);
                 } catch(\Exception $e) {
@@ -386,7 +395,7 @@ class ServicePluginManager extends AbstractPluginManager
             $proxy = new $fqcn($instance);
             
             if ($this->getCache()) {
-                $this->getCache()->setItem($serviceId, $fqcn);
+                $this->getCache()->setItem(self::CACHE_ID_PREFIX . $serviceId, $fqcn);
             }
             
             // Run initializers for the proxy class
