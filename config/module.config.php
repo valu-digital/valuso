@@ -38,6 +38,11 @@ return [
     'valu_so' => [
         'proxy_dir' => 'data/valuso/proxy',
         'use_main_locator' => true,
-        'services' => []
+        'services' => [
+            'ValuSoSetup' => [
+                'name' => 'ValuSo.Setup',
+                'class' => 'ValuSo\\Service\\SetupService',
+            ],
+        ]
     ]
 ];
