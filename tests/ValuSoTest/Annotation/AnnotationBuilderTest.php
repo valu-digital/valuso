@@ -9,9 +9,9 @@ use PHPUnit_Framework_TestCase;
 use ArrayObject;
 
 /**
- * AnnotationManager test case.
+ * AnnotationBuilder test case.
  */
-class AnnotationManagerTest extends PHPUnit_Framework_TestCase
+class AnnotationBuilderTest extends PHPUnit_Framework_TestCase
 {
 
     /**
@@ -68,7 +68,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
             ['events' => [
                 ['type' => 'pre', 'name' => null, 'args' => null, 'params' => null],    
                 ['type' => 'post', 'name' => 'post.<service>.run', 'args' => ['job', 'delayed'], 'params' => ['custom' => 'value']],   
-            ], 'context' => '*', 'aliases' => [], 'inherit' => false],
+            ], 'contexts' => ['native'], 'aliases' => [], 'inherit' => false],
             $specs['operations']['run']->getArrayCopy()
         );
     }
@@ -100,7 +100,7 @@ class AnnotationManagerTest extends PHPUnit_Framework_TestCase
         $this->assertInstanceOf('\ArrayObject', $specs['operations']['getInternal']);
         
         $this->assertEquals(
-            ['context' => '*', 'events' => [], 'aliases' => [], 'inherit' => false],
+            ['contexts' => ['native'], 'events' => [], 'aliases' => [], 'inherit' => false],
             $specs['operations']['getInternal']->getArrayCopy()
         );
     }
