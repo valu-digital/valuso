@@ -100,7 +100,7 @@ class ServiceProxyGenerator
             'properties' => [
                 new PropertyGenerator('__wrappedObject', null, PropertyGenerator::FLAG_PUBLIC),
                 new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE),
-                new PropertyGenerator('__command', null, PropertyGenerator::FLAG_PRIVATE)
+                new PropertyGenerator('__commandStack', null, PropertyGenerator::FLAG_PRIVATE)
             ]
         ]);
         
@@ -284,8 +284,8 @@ class ServiceProxyGenerator
         '    $this->__operationNotFound($command);' . "\n" .
         '}' . "\n\n";
         
-        // Store command to private property
-        $invokeImpl .= '$this->__command = $command;' . "\n\n";
+        // Store command to a private stack
+        $invokeImpl .= '$this->__commandStack[] = $command;' . "\n\n";
         
         // Define injector for identity
         $invokeImpl .=
@@ -318,17 +318,19 @@ class ServiceProxyGenerator
         
             // Generate invokation code 
             if (!sizeof($specs['assoc'])) {
-                $invokeImpl .= '        return $this->' . $methodName . "();\n";
+                $invokeImpl .= '        $result = $this->' . $methodName . "();\n";
             } else {
         
                 $invokeImpl .= '        if ($isAssoc) {' . "\n"
-                            .  '            return $this->' . $methodName . '(' . implode(', ', $specs['assoc']) . ");\n"
+                            .  '            $result = $this->' . $methodName . '(' . implode(', ', $specs['assoc']) . ");\n"
                             .  '        } else {' . "\n"
-                            .  '            return $this->' . $methodName . '(' . implode(', ', $specs['numeric']) . ");\n"
+                            .  '            $result = $this->' . $methodName . '(' . implode(', ', $specs['numeric']) . ");\n"
                             .  '        }' . "\n";
             }
         
-            $invokeImpl .= '        break;' . "\n";
+            $invokeImpl .=    '        array_pop($this->__commandStack);' . "\n"
+                            . '        return $result;' . "\n"
+                            . '        break;' . "\n";
         }
         
         $invokeImpl .= "}\n"; // end switch
@@ -614,7 +616,7 @@ class ServiceProxyGenerator
                     }
                     
                     $code .= '$__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
-                    $code .= '$__event->setCommand($this->__command);' . "\n";
+                    $code .= '$__event->setCommand($this->__commandStack[sizeof($this->__commandStack)-1]);' . "\n";
                     
                     $code .= '$this->getEventManager()->trigger($__event);' . "\n";
                 }
