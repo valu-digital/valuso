@@ -38,6 +38,9 @@ return [
     'valu_so' => [
         'proxy_dir' => 'data/valuso/proxy',
         'use_main_locator' => true,
+        'cache' => [
+            'adapter' => 'memory',
+        ],
         'services' => [
             'ValuSoSetup' => [
                 'name' => 'ValuSo.Setup',
