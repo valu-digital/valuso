@@ -39,13 +39,6 @@ class ServiceLoader{
 	private $commandManager;
 	
 	/**
-	 * Cache adapter
-	 *
-	 * @var \Zend\Cache\Storage\StorageInterface
-	 */
-	private $cache;
-	
-	/**
 	 * PCRE pattern for ID matching
 	 * 
 	 * @var string
@@ -99,9 +92,6 @@ class ServiceLoader{
 		        case 'service_manager':
 		            $this->configureServiceManager($value);
 		            break;
-			    case 'cache':
-			        $this->setCache($value);
-			        break;
 			}
 		}
 		
@@ -357,6 +347,16 @@ class ServiceLoader{
         
         return $this->getServicePluginManager()->get($id, $options, true, true);
 	}
+	
+	/**
+	 * Retrieve IDs for services
+	 * 
+	 * @return array
+	 */
+	public function getServiceIds()
+	{
+	    return array_keys($this->services);
+	}
 
 	/**
 	 * Test if a service exists
@@ -373,29 +373,33 @@ class ServiceLoader{
 	}
 	
 	/**
-	 * Get cache adapter
+	 * Retrieve service manager
 	 *
-	 * @return \Zend\Cache\Storage\StorageInterface
+	 * @return \ValuSo\Broker\ServicePluginManager
 	 */
-	public function getCache()
+	public function getServicePluginManager()
 	{
-	    if (!$this->cache) {
-	        $this->setCache(StorageFactory::factory(['adapter' => 'memory']));
-	    }
-	    
-	    return $this->cache;
-	}
+	    if($this->servicePluginManager === null){
+	        $this->servicePluginManager = new ServicePluginManager();
+	        $that = $this;
 	
-	/**
-	 * Set cache adapter
-	 * 
-	 * @param StorageInterface $cache
-	 * @return ServiceLoader
-	 */
-	public function setCache(StorageInterface $cache)
-	{
-	    $this->cache = $cache;
-	    return $this;
+	        $this->servicePluginManager->addInitializer(function ($instance, $serviceManager) use ($that) {
+	             
+	            $name     = $serviceManager->getCreationInstanceName();
+	            $options  = $serviceManager->getCreationInstanceOptions();
+	             
+	            /**
+	             * Configure service
+	            */
+	            if($options !== null && sizeof($options) &&
+	               $instance instanceof Feature\ConfigurableInterface){
+	
+	                $instance->setConfig($options);
+	            }
+	        });
+	    }
+	     
+	    return $this->servicePluginManager;
 	}
 	
 	/**
@@ -416,37 +420,5 @@ class ServiceLoader{
 	 */
 	public final function normalizeServiceId($id){
 	    return strtolower($id);
-	}
-	
-	/**
-	 * Retrieve service manager
-	 *
-	 * @return \ValuSo\Broker\ServicePluginManager
-	 */
-	protected function getServicePluginManager()
-	{
-	    if($this->servicePluginManager === null){
-	        $this->servicePluginManager = new ServicePluginManager();
-	        $this->servicePluginManager->setCache($this->getCache());
-	         
-	        $that = $this;
-	
-	        $this->servicePluginManager->addInitializer(function ($instance, $serviceManager) use ($that) {
-	             
-	            $name     = $serviceManager->getCreationInstanceName();
-	            $options  = $serviceManager->getCreationInstanceOptions();
-	             
-	            /**
-	             * Configure service
-	            */
-	            if($options !== null && sizeof($options) &&
-	               $instance instanceof Feature\ConfigurableInterface){
-	
-	                $instance->setConfig($options);
-	            }
-	        });
-	    }
-	     
-	    return $this->servicePluginManager;
 	}
 }
