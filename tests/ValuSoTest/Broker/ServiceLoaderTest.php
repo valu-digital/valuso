@@ -293,17 +293,6 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('service2', $responses->last());
     }
 
-    public function testSetGetCache()
-    {
-        $cache = StorageFactory::factory(['adapter' => 'memory']);
-        $this->assertEquals(
-            $this->serviceLoader,
-            $this->serviceLoader->setCache($cache)
-        );
-        
-        $this->assertEquals($cache, $this->serviceLoader->getCache());
-    }
-    
     public function testSetOptions()
     {
         $cache     = StorageFactory::factory(['adapter' => 'memory']);
@@ -312,13 +301,11 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         $services  = ['testid' => ['name' => 'testservice']];
     
         $this->serviceLoader->setOptions(array(
-                'cache' => $cache,
                 'locator' => $locator,
                 'service_manager' => $smConfig,
                 'services' => $services
         ));
     
-        $this->assertSame($cache, $this->serviceLoader->getCache());
         $this->assertSame($locator, $this->serviceLoader->getServiceLocator());
         $this->assertInstanceof(self::CLOSURE_SERVICE_CLASS, $this->serviceLoader->load('testid'));
     }
