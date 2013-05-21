@@ -100,7 +100,7 @@ class ServiceProxyGenerator
             'properties' => [
                 new PropertyGenerator('__wrappedObject', null, PropertyGenerator::FLAG_PUBLIC),
                 new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE),
-                new PropertyGenerator('__commandStack', null, PropertyGenerator::FLAG_PRIVATE)
+                new PropertyGenerator('__commandStack', array(), PropertyGenerator::FLAG_PRIVATE)
             ]
         ]);
         
@@ -332,6 +332,10 @@ class ServiceProxyGenerator
                             . '        return $result;' . "\n"
                             . '        break;' . "\n";
         }
+        
+        $invokeImpl .= '    default:' . "\n"
+                    .  '        array_pop($this->__commandStack);' . "\n"
+                    .  '    break;' . "\n";
         
         $invokeImpl .= "}\n"; // end switch
         
@@ -589,8 +593,6 @@ class ServiceProxyGenerator
                     
                     $specs['name'] = str_replace('<service>', $serviceId, strtolower($specs['name']));
                     
-                    $code .= '// Trigger "'.$type.'" event' . "\n";
-                    
                     if (!$paramsExist) {
                         $code .= '$__event_params = new \ArrayObject();' . "\n";
                         
@@ -615,10 +617,13 @@ class ServiceProxyGenerator
                         $responseInjected = true;
                     }
                     
-                    $code .= '$__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
-                    $code .= '$__event->setCommand($this->__commandStack[sizeof($this->__commandStack)-1]);' . "\n";
+                    $code .= '// Trigger "'.$type.'" event' . "\n";
+                    $code .= 'if (sizeof($this->__commandStack)) {' . "\n";
+                    $code .= '    $__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
+                    $code .= '    $__event->setCommand($this->__commandStack[sizeof($this->__commandStack)-1]);' . "\n";
                     
-                    $code .= '$this->getEventManager()->trigger($__event);' . "\n";
+                    $code .= '    $this->getEventManager()->trigger($__event);' . "\n";
+                    $code .= '}' . "\n";
                 }
             }
             
