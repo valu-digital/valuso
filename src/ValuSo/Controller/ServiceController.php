@@ -187,13 +187,17 @@ class ServiceController extends AbstractActionController
                     ->toArray();
             }
             
-            // Merge params with special q parameter
+            // Use special 'q' parameters instead, if specified
             if (isset($params['q'])) {
-                $params = array_merge(
-                    Json::decode($params['q'],
-                    Json::TYPE_ARRAY), $params);
-            
-                unset($params['q']);
+                $params = Json::decode($params['q'], Json::TYPE_ARRAY);
+                
+                // Files are an exception, as they cannot be passed as part of
+                // the special q parameter
+                foreach ($this->getRequest()->getFiles() as $name => $value) {
+                    if (!isset($params[$name])) {
+                        $params[$name] = $value;
+                    }
+                }
             }
             
             $data = $this->exec(
