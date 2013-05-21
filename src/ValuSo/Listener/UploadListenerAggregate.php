@@ -12,39 +12,47 @@ class UploadListenerAggregate implements ListenerAggregateInterface
 {
     
     /**
-     * Name of the service
+     * Name of the "before" event
      * 
      * @var string
      */
-    private $service;
+    protected $eventBefore;
     
     /**
-     * Name of the operation
+     * Name of the "after" event
      * 
      * @var string
      */
-    private $operation;
+    protected $eventAfter;
     
     /**
      * Name of the parameters
      * 
      * @var array
      */
-    private $params = array();
+    protected $params = array();
     
     /**
      * Temporary directory
      * 
      * @var string
      */
-    private $tempDir;
+    protected $tempDir;
+    
+    /**
+     * Whether or not paths should be converted to local (file://)
+     * URLs by default.
+     * 
+     * @var boolean
+     */
+    protected $pathToUrl = false;
 
     /**
      * Temporary files by event ID
      * 
      * @var array
      */
-    private $tmpFiles = array();
+    protected $tmpFiles = array();
     
     /**
      * Attached listeners
@@ -53,12 +61,13 @@ class UploadListenerAggregate implements ListenerAggregateInterface
      */
     protected $listeners;
     
-    public function __construct($service, $operation, array $params, $tempDir = null)
+    public function __construct($eventBefore, $eventAfter, array $params, $tempDir = null, $pathToUrl = false)
     {
-        $this->service    = $service;
-        $this->operation  = $operation;
+        $this->eventBefore = strtolower($eventBefore);
+        $this->eventAfter  = strtolower($eventAfter);
         $this->params     = $params;
         $this->tempDir    = $tempDir ? $tempDir : sys_get_temp_dir();
+        $this->pathToUrl  = $pathToUrl;
     }
     
     /**
@@ -67,11 +76,8 @@ class UploadListenerAggregate implements ListenerAggregateInterface
      */
     public function attach(EventManagerInterface $events)
     {
-        $suffix = strtolower($this->getService() . '.' . $this->getOperation());
-            
-        // Attach listeners for init and final
-        $this->listeners[] = $events->attach('init.' . $suffix, array($this, 'prepareUpload'));
-        $this->listeners[] = $events->attach('final.' . $suffix, array($this, 'finalizeUpload'));
+        $this->listeners[] = $events->attach($this->eventBefore, array($this, 'prepareUpload'));
+        $this->listeners[] = $events->attach($this->eventAfter, array($this, 'finalizeUpload'));
     }
     
     /**
@@ -107,7 +113,7 @@ class UploadListenerAggregate implements ListenerAggregateInterface
         $uploads = array();
         
         foreach ($this->params as $param) {
-            $upload = $command->getParam($param);
+            $upload = $event->getParam($param);
             
             if ($this->isPhpFileUpload($upload)) {
                 // Handle error
@@ -122,10 +128,16 @@ class UploadListenerAggregate implements ListenerAggregateInterface
                 $files = $this->movePhpUploadTmpFiles($upload);
                 $this->tmpFiles[spl_object_hash($command)] = $files;
                 
+                if ($this->pathToUrl) {
+                    foreach ($files as &$value) {
+                        $value = 'file://' . $value;
+                    }
+                }
+                
                 if ($this->getNumberOfUploads($upload) == 1) {
-                    $command->setParam($param, array_pop($files));
+                    $event->setParam($param, array_pop($files));
                 } else {
-                    $command->setParam($param, $files);
+                    $event->setParam($param, $files);
                 }
             }
         }
@@ -141,26 +153,6 @@ class UploadListenerAggregate implements ListenerAggregateInterface
     {
         $id = spl_object_hash($event->getCommand());
         $this->removeTmpFiles($id);
-    }
-    
-    /**
-     * Retrieve the name of the service to listen to
-     * 
-     * @return string
-     */
-    public function getService()
-    {
-        return $this->service;
-    }
-    
-	/**
-	 * Retrieve the name of the operation to listen to
-	 * 
-     * @return string
-     */
-    public function getOperation()
-    {
-        return $this->operation;
     }
     
     /**
