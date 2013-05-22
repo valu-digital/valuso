@@ -29,6 +29,6 @@ trait ProxyTrait
      */
     protected function proxy()
     {
-        return $this->proxy ? $this->proxy : $this;
+        return $this->serviceProxy ? $this->serviceProxy : $this;
     }
 }
