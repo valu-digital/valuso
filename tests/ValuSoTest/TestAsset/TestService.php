@@ -62,7 +62,7 @@ class TestService extends AbstractService implements ProxyAwareInterface
     public function update($query, array $specs = array())
     {
         $entity = new TestEntity();
-        return $this->proxy->doUpdate($entity, $specs);
+        return $this->proxy()->doUpdate($entity, $specs);
     }
     
     /**
