@@ -46,6 +46,10 @@ return [
                 'name' => 'ValuSo.Setup',
                 'class' => 'ValuSo\\Service\\SetupService',
             ],
+            'ValuSoBatch' => [
+                'name' => 'Batch',
+                'class' => 'ValuSo\\Service\\BatchService',
+            ],
         ]
     ]
 ];
