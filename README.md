@@ -34,15 +34,24 @@ $service->create('administrator');
 ### Invoke services via HTTP
 ValuSo provides end points (controllers) for HTTP REST and RPC interfaces. The difference between these two interfaces is minor and you should stick to using either one. Both interfaces return responses in JSON format.
 
-**Using RPC interface to find a user:**
-```
-GET /rpc/group/find/029713b396493b01bfc619a7493e2cba
-```
-
 **Using REST interface to lock user account:**
 ```
 POST /rest/user/029713b396493b01bfc619a7493e2cba
 X-VALU-OPERATION: lock
+```
+
+Response:
+```
+{"d":true}
+```
+
+**Using RPC interface to find a group:**
+```
+GET /rpc/group/find/029713b396493b01bfc619a7493e2cba
+```
+Response:
+```
+{"d":{"name":"sales-people", "createdAt":"2013-01-28T10:13:21+0200", "updatedAt":...}}
 ```
 
 ### Execute batch-operations
