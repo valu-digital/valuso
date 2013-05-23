@@ -2,6 +2,17 @@
 
 ValuSo is a Zend Framework 2 module for service oriented application architecture.
 
+## Installation
+
+Use [Composer](http://getcomposer.org/) to install 
+[`valu/valuso` package](https://packagist.org/packages/valu/valuso).
+
+```sh
+php composer.phar require valu/valuso
+```
+
+Type `dev-master`, when asked which version to install. Now it is ready to be used as a library. To use it as a ZF2 module, add `valuso` to your modules in `config/application.config.php`.
+
 ## Features
 
 ### Convenient and IDE-safe way to use services
@@ -326,3 +337,4 @@ $config = [
   ]
 ],
 ```
+
