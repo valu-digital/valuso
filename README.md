@@ -228,12 +228,11 @@ The concept and implementation of the service layer is similar to router/control
 
 ## NoMVC or MVSC
 
-With ValuSo, the developer may choose to ignore the common MVC pattern or extend it with the service layer. ValuSo comes with three pre-configured routes that point to **ServiceController**. This controller provides three actions:
-- **restAction** for HTTP REST requests,
-- **rpcAction** for HTTP RPC requests and
+With ValuSo, the developer may choose to ignore the common MVC pattern or extend it with the service layer. ValuSo comes with three pre-configured routes for `HTTP REST`, `HTTP RPC` and `console` interfaces. These routes point to `ServiceController`, which provides two actions:
+- **httpAction** for HTTP REST/RPC requests and
 - **consoleAction** for console requests.
 
-All of these controllers are able to transform client’s requests into service calls and service responses into correct HTTP/CLI response format (which is JSON in both cases).
+These actions are able to transform client’s requests into service calls and service responses into correct HTTP/CLI response format (which is JSON in both cases).
 
 ValuSo is designed to work with applications, where the back end needs to be completely separated from the front end. For this reason the concept of **View** in MVC pattern is often obscure.
 
