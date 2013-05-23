@@ -33,6 +33,21 @@ return [
                     ],
                 ],
             ],
+            'valuso-rest' => [
+                'type' => 'Zend\\Mvc\\Router\\Http\\Regex',
+                'options' => [
+                    'regex' => '/api/rest/(?<service>[a-zA-Z][\\.a-zA-Z0-9_-]*)(?<path>/.*)?',
+                    'constraints' => [
+                        'service' => '[a-zA-Z][\\.a-zA-Z0-9_-]*'
+                    ],
+                    'defaults' => [
+                        'controller' => 'ValuSoServiceController',
+                        'action' => 'http',
+                        '_authenticate' => true
+                    ],
+                    'spec' => '/rest-api/%service%'
+                ],
+            ],
         ]
     ],
     'valu_so' => [
