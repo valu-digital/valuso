@@ -37,6 +37,15 @@ q: {
 	}
 }
 ```
+Response
+```
+{
+	"d": {
+		"cmd1": true,
+		"cmd2": true
+	}
+}
+```
 
 ### Easy to use existing classes as services
 ServiceBroker expects that the class registered as a service provides **__invoke()** method. In most cases the classes don't implement this method, which indicates the ServiceBroker (or ServicePluginManager to be exact) that these services should be wrapped with a special **proxy class**. With this feature, it is possible to use almost any existing class as a service.
