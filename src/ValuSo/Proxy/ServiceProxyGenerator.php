@@ -395,7 +395,8 @@ class ServiceProxyGenerator
         $methodNames        = array();
         $reflectionMethods  = $reflectionClass->getMethods();
         
-        $excludedMethods    = array(
+        $excludedMethods  = array(
+            '__construct' => true,
             '__get'    => true,
             '__set'    => true,
             '__isset'  => true,
@@ -430,7 +431,7 @@ class ServiceProxyGenerator
             
             // Generate service methods only for public methods or
             // methods that have events configured 
-            if (!$method->isPublic() && !$eventConfig) {
+            if ((!$method->isPublic() && !$eventConfig) || $method->isPrivate()) {
                 continue;
             }
             
@@ -496,8 +497,14 @@ class ServiceProxyGenerator
             } else {
                 $source .= "return " . $cb . "\n";
             }
+            
+            if ($method->isPublic()) {
+                $visibility = MethodGenerator::FLAG_PUBLIC;
+            } else {
+                $visibility = MethodGenerator::FLAG_PROTECTED;
+            }
         
-            $methods[] = new MethodGenerator($name, $parameters, MethodGenerator::FLAG_PUBLIC, $source);
+            $methods[] = new MethodGenerator($name, $parameters, $visibility, $source);
         }
         
         return $methods;
