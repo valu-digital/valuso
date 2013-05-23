@@ -3,9 +3,9 @@
     "version": "0.9.0",
     "type": "library",
     "keywords": [
-        "valu", "service", "zend framework"
+        "valu", "service", "service layer", "zend framework", "zend framework 2"
     ],
-    "description": "Zend Framework 2 service layer",
+    "description": "Zend Framework 2 module for service oriented application architecture",
     "require": {
         "php": "5.4.*",
     	"zendframework/zendframework": "2.*",
