@@ -17,8 +17,17 @@ Type `dev-master`, when asked which version to install. Now it is ready to be us
 ### Convenient and IDE-safe way to use services
 Typically service is accessed calling **service()** method of the ServiceBroker class. This method initializes a new Worker object. To skip this initialization, it is possible to call ServiceBroker's **execute()** or **dispatch()** directly.
 ```php
-/* @var $service \ValuUser\Service\UserService */
+// Fetch broker from main service locator
+$serviceBroker = $serviceLocator->get('ServiceBroker');
+
+/** 
+ * Initialize Worker, but tell the IDE to treat $service
+ * as an instance of UserService class
+ * @var $service \ValuUser\Service\UserService 
+ */
 $service = $serviceBroker->service('User');
+
+// Call 'create' operation
 $service->create('administrator');
 ```
 
