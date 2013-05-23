@@ -99,8 +99,8 @@ $loader->registerService('HttpBasicAuth', 'Auth', new HttpBasicAuthenticationSer
 $loader->registerService('HttpDigestAuth', 'Auth', new HttpDigestAuthenticationService());
 
 // Authenticate until one of the respondents returns
-// either boolean true or false
-$serviceBroker
+// either boolean true or false and retrieve that value
+$isAuthenticated = $serviceBroker
 	->service('Auth')
 	->until(function($response) {return is_bool($response);})
 	->authenticate($httpRequest)
@@ -108,7 +108,7 @@ $serviceBroker
 ```
 
 ### Extend any existing service with your implementation
-Usually, if class doesn't support certain operation, it throws **UnsupportedOperationException**. CommandManager doesn't stop the execution here, but finds the next registered class/closure for the service and gives it a chance to execute the operation. This feature can be used to extend existing services.
+Usually, if service implementation doesn't support certain operation, it throws **UnsupportedOperationException**. CommandManager doesn't stop execution here, but finds the next registered class/closure for the service and gives it a chance to execute the operation. This feature can be used to extend existing services.
 ```php
 class ExtendedUserService {
     public function findExpiredAccounts() {
@@ -122,8 +122,8 @@ $loader->registerService('ExtendedUserService', 'User', new ExtendedUserService(
 $serviceBroker->service('User')->findExpiredAccounts();
 ```
 
-### Listen to services
-It is often important to be able to listen to when an operation is being invoked. ServiceBroker provides an instance of EventManager and automatically triggers events before and after operation has been invoked. EventManagerAware service classes can also trigger events of their own.
+### Listening to services
+It is often important to listen to service operations. ServiceBroker provides an instance of EventManager and automatically triggers events before and after operation has been invoked. EventManagerAware service classes can also trigger events of their own.
 ```php
 $serviceBroker
 	->getEventManager()
@@ -138,6 +138,73 @@ $serviceBroker
 		}
 	);
 ```
+
+### Calling services from within service
+It is common to use another service from within service class. To make this easy, ValuSo provides ServiceBrokerAware interface. This interface is used to inject ServiceBroker instance. There's also a built-in trait, **ServiceBrokerTrait**, that implements the interface for you.
+```php
+class UserModuleSetupService 
+	implements ServiceBrokerAwareInterface
+{
+	use ServiceBrokerTrait;
+
+	public function setup()
+	{
+		// Create administrator
+		$this->getServiceBroker()
+			->service('User')
+			->create('administrator');
+
+		return true;
+	}
+}
+```
+
+### Using proxy() method to call internal method
+When service proxy classes are used, the proxy class implements missing __invoke method, maps operation name to internal method name and calls that method. Proxy class actually overrides the default method. Typical proxy method implementation looks something like this:
+```php
+public function create($name, array $specs = array())
+{
+    $response = $this->__wrappedObject->create($name, $specs);
+
+    $__event_params = new \ArrayObject();
+    $__event_params["name"] = $name;
+    $__event_params["specs"] = $specs;
+    $__event_params["__response"] = $response;
+    // Trigger "post" event
+    if (sizeof($this->__commandStack)) {
+        $__event = new \ValuSo\Broker\ServiceEvent('post.valuaccount.create', $this->__wrappedObject, $__event_params);
+        $__event->setCommand($this->__commandStack[sizeof($this->__commandStack)-1]);
+        $this->getEventManager()->trigger($__event);
+    }
+    return $response;
+}
+```
+
+As you can see, on the first line it calls the real method implementation and the following code lines define event parameters and finally trigger a 'post' event.
+
+You cannot call these proxy methods normally from within the real class. It is however, made possible via special **proxy()** method. The reason for this is, that without using the proxy() method it is not possible to call another method and still trigger its events etc.
+
+```php
+class UserService
+{
+    public function update($query, array $specs)
+    {
+        $user = $this->resolveUser($query);
+        return $this->proxy()->doUpdate($user, $specs);
+    }
+
+
+    /**
+     * @ValuService\Trigger({"type":"post","name":"post.<service>.update"})
+     */
+    protected function doUpdate(User $user, array $specs)
+    {
+        // update
+    }
+}
+```
+
+
 
 ## Service Layer
 
