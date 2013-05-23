@@ -114,6 +114,12 @@ class ServiceController extends AbstractActionController
     const STATUS_PERMISSION_DENIED = 403;
     
     /**
+     * HTTP header for operation name
+     * @var string
+     */
+    const HEADER_OPERATION = 'X-VALU-OPERATION';
+    
+    /**
      * HTTP header to describe how verbose the
      * errors should be
      * @var string
@@ -152,7 +158,8 @@ class ServiceController extends AbstractActionController
 	 * @throws \Exception
 	 * @return Response
 	 */
-	public function httpAction(){
+	public function httpAction()
+	{
 	    $status		= self::STATUS_SUCCESS;
 	    $responses	= array();
 	    $exception	= null;
@@ -169,36 +176,7 @@ class ServiceController extends AbstractActionController
                 throw new OperationNotFoundException("Route doesn't contain operation information");
             }
             
-            // Parse parameters
-            if ($this->getRequest()->isPost()) {
-                $params = $this->getRequest()
-                    ->getPost()
-                    ->toArray();
-            
-                $params = array_merge(
-                        $params,
-                        $this->getRequest()
-                        ->getFiles()
-                        ->toArray()
-                );
-            } else {
-                $params = $this->getRequest()
-                    ->getQuery()
-                    ->toArray();
-            }
-            
-            // Use special 'q' parameters instead, if specified
-            if (isset($params['q'])) {
-                $params = Json::decode($params['q'], Json::TYPE_ARRAY);
-                
-                // Files are an exception, as they cannot be passed as part of
-                // the special q parameter
-                foreach ($this->getRequest()->getFiles() as $name => $value) {
-                    if (!isset($params[$name])) {
-                        $params[$name] = $value;
-                    }
-                }
-            }
+            $params = $this->fetchParams();
             
             $data = $this->exec(
                     $service, 
@@ -408,13 +386,77 @@ class ServiceController extends AbstractActionController
 	protected function fetchOperation()
 	{
         $operation = $this->getRouteParam('operation');
-        $operation = $this->parseCanonicalName($operation);
         
-        if (preg_match($this->operationPattern, $operation)) {
-            return $operation;
+        if ($operation !== null) {
+            $operation = $this->parseCanonicalName($operation);
+            
+            if (preg_match($this->operationPattern, $operation)) {
+                return $operation;
+            } else {
+                return false;
+            }
         } else {
-            return false;
+            $operation = $this->getRequest()->getHeader(self::HEADER_OPERATION);
+            
+            if (!$operation) {
+                $operation = 'http-'.$this->getRequest()->getMethod();
+            }
+            
+            return $this->parseCanonicalName($operation);
         }
+	}
+	
+	/**
+	 * Parse parameters from request
+	 * 
+	 * @return array
+	 */
+	protected function fetchParams()
+	{
+	    // Parse parameters
+	    if ($this->getRequest()->isPost()) {
+	        $params = $this->getRequest()
+    	        ->getPost()
+    	        ->toArray();
+	    
+	        $params = array_merge(
+	                $params,
+	                $this->getRequest()
+	                ->getFiles()
+	                ->toArray()
+	        );
+	    } else {
+	        $params = $this->getRequest()
+	            ->getQuery()
+	            ->toArray();
+	    }
+	    
+	    // Use special 'q' parameters instead, if specified
+	    if (isset($params['q'])) {
+	        $params = Json::decode($params['q'], Json::TYPE_ARRAY);
+	    
+	        // Files are an exception, as they cannot be passed as part of
+	        // the special q parameter
+	        foreach ($this->getRequest()->getFiles() as $name => $value) {
+	            if (!isset($params[$name])) {
+	                $params[$name] = $value;
+	            }
+	        }
+	    } else {
+	        // Use route param 'path' and parse its parameters
+	        $paramsInRoute = $this->getRouteParam('path');
+	        
+	        if ($paramsInRoute && $paramsInRoute !== '/') {
+	            $paramsInRoute = explode('/', $paramsInRoute);
+	            array_shift($paramsInRoute);
+	             
+	            $params = array_merge(
+	                    $params,
+	                    $paramsInRoute);
+	        }
+	    }
+	    
+	    return $params;
 	}
 	
 	/**
