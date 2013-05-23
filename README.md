@@ -12,6 +12,26 @@ php composer.phar require valu/valuso
 
 Type `dev-master`, when asked which version to install. Now it is ready to be used as a library. To use it as a ZF2 module, add `valuso` to your modules in `config/application.config.php`.
 
+## Service Layer
+
+> Defines an application's boundary with a layer of services that establishes a set of available operations and coordinates the application's response in each operation. - [Randy Stafford, EAA](http://martinfowler.com/eaaCatalog/serviceLayer.html)
+
+In ValuSo the service layer is implemented using service classes or closures. The operations of these services are available via service broker. When an operation is executed, the  service broker calls the registered **closure** or **__invoke** method of the service class. If __invoke is not available, the service class is wrapped with a special **proxy class**, that implements the __invoke method by mapping the operation name to method name.
+
+The consumer of a service doesn't know who actually implements the service and where.
+
+The concept and implementation of the service layer is similar to router/controller interaction in MVC pattern.  However, they operate on different levels. Controller is an endpoint that receives the user’s (or client’s) raw request (e.g. from HTTP). Controller then needs to decide who is actually responsible of processing the request. With service layer available, the controller calls appropriate services and returns response that may actually be an aggregation of multiple responses from different services.
+
+## NoMVC or MVSC
+
+With ValuSo, the developer may choose to ignore the common MVC pattern or extend it with the service layer. ValuSo comes with three pre-configured routes for `HTTP REST`, `HTTP RPC` and `console` interfaces. These routes point to `ServiceController`, which provides two actions:
+- **httpAction** for HTTP REST/RPC requests and
+- **consoleAction** for console requests.
+
+These actions are able to transform client’s requests into service calls and service responses into correct HTTP/CLI response format (which is JSON in both cases).
+
+ValuSo is designed to work with applications, where the back end needs to be completely separated from the front end. For this reason the concept of **View** in MVC pattern is often obscure.
+
 ## Features
 
 ### Convenient and IDE-safe way to use services
@@ -231,28 +251,6 @@ class UserService
     }
 }
 ```
-
-
-
-## Service Layer
-
-> Defines an application's boundary with a layer of services that establishes a set of available operations and coordinates the application's response in each operation. - [Randy Stafford, EAA](http://martinfowler.com/eaaCatalog/serviceLayer.html)
-
-In ValuSo the service layer is implemented using service classes or closures. The operations of these services are available via service broker. When an operation is executed, the  service broker calls the registered **closure** or **__invoke** method of the service class. If __invoke is not available, the service class is wrapped with a special **proxy class**, that implements the __invoke method by mapping the operation name to method name.
-
-The consumer of a service doesn't know who actually implements the service and where.
-
-The concept and implementation of the service layer is similar to router/controller interaction in MVC pattern.  However, they operate on different levels. Controller is an endpoint that receives the user’s (or client’s) raw request (e.g. from HTTP). Controller then needs to decide who is actually responsible of processing the request. With service layer available, the controller calls appropriate services and returns response that may actually be an aggregation of multiple responses from different services.
-
-## NoMVC or MVSC
-
-With ValuSo, the developer may choose to ignore the common MVC pattern or extend it with the service layer. ValuSo comes with three pre-configured routes for `HTTP REST`, `HTTP RPC` and `console` interfaces. These routes point to `ServiceController`, which provides two actions:
-- **httpAction** for HTTP REST/RPC requests and
-- **consoleAction** for console requests.
-
-These actions are able to transform client’s requests into service calls and service responses into correct HTTP/CLI response format (which is JSON in both cases).
-
-ValuSo is designed to work with applications, where the back end needs to be completely separated from the front end. For this reason the concept of **View** in MVC pattern is often obscure.
 
 ## Getting started
 
