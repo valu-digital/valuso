@@ -228,10 +228,10 @@ The concept and implementation of the service layer is similar to router/control
 
 ## NoMVC or MVSC
 
-With ValuSo, the developer may choose to ignore the common MVC pattern or extend it with the service layer. ValuSo provides three controllers that usually provide the required functionality for complete (service oriented) applications: 
-- **HttpRpcController**, 
-- **HttpRestController** and 
-- **CliController**. 
+With ValuSo, the developer may choose to ignore the common MVC pattern or extend it with the service layer. ValuSo comes with three pre-configured routes that point to **ServiceController**. This controller provides three actions:
+- **restAction** for HTTP REST requests,
+- **rpcAction** for HTTP RPC requests and
+- **consoleAction** for console requests.
 
 All of these controllers are able to transform client’s requests into service calls and service responses into correct HTTP/CLI response format (which is JSON in both cases).
 
