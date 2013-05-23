@@ -1,6 +1,7 @@
 {
     "name": "valu/valuso",
     "version": "0.9.0",
+    "license": "BSD-3-Clause",
     "type": "library",
     "keywords": [
         "valu", "service", "service layer", "zend framework", "zend framework 2"
