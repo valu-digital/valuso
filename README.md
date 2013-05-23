@@ -4,7 +4,8 @@ ValuSo is a Zend Framework 2 module for service oriented application architectur
 
 ## Features
 
-### Convenient and IDE-safe way to invoke services
+### Convenient and IDE-safe way to use services
+Typically service is accessed calling **service()** method of the ServiceBroker class. This method initializes a new Worker object. To skip this initialization, it is possible to call ServiceBroker's **execute()** or **dispatch()** directly.
 ```php
 /* @var $service \ValuUser\Service\UserService */
 $service = $serviceBroker->service('User');
@@ -12,19 +13,21 @@ $service->create('administrator');
 ```
 
 ### Invoke services via HTTP
+ValuSo provides end points (controllers) for HTTP REST and RPC interfaces. The difference between these two interfaces is minor and you should stick to using either one. The interfaces return responses in JSON format. They also accept request parameters in JSON format, using special **q** parameter.
 
-Using RPC interface:
+**Using RPC interface to find a user:**
 ```
 GET /rpc/group/find/029713b396493b01bfc619a7493e2cba
 ```
 
-Or using REST interface:
+**Using REST interface to lock user account:**
 ```
 POST /rest/user/029713b396493b01bfc619a7493e2cba
 X-VALU-OPERATION: lock
 ```
 
 ### Execute batch-operations
+Batch operations are important, for performance reasons, especially when the services are invoked via external interface.
 ```
 POST /rest/batch
 q: {
@@ -36,6 +39,7 @@ q: {
 ```
 
 ### Easy to use existing classes as services
+ServiceBroker expects that the class registered as a service provides **__invoke()** method. In most cases the classes don't implement this method, which indicates the ServiceBroker (or ServicePluginManager to be exact) that these services should be wrapped with a special **proxy class**. With this feature, it is possible to use almost any existing class as a service.
 ```php
 // Assume that LoggerServiceFactory is registered
 // for service locator with service ID 'ZendLogger'
@@ -47,6 +51,7 @@ $serviceBroker->service('Log')->err('Something went wrong');
 ```
 
 ### Context-aware services
+Often the services need to know, in which context they are executed. Mostly, because some services shouldn't be exposed to external interfaces. Following example demonstrates this by calling **update** operation in unsupported context.
 ```php
 $serviceBroker
 	->service('User')
@@ -56,6 +61,7 @@ $serviceBroker
 ```
 
 ### Aspect-oriented programming with annotated services
+There are lots of cross-cutting concerns with services. Most services need to trigger events, provide logging and access control mechanism. The best way to achieve these features, without messing the actual business code, is to annotate the operations.
 ```php
 use ValuSo\Annotation as ValuService;
 class UserService {
@@ -76,6 +82,7 @@ class UserService {
 ```
 
 ### Multiple respondents for one service
+Often there is only one class or closure per service, but ValuSo is not limited to that. You can actually register any number of classes/closures for the same service name.
 ```php
 $loader = $serviceBroker->getLoader();
 $loader->registerService('HmacAuth', 'Auth', new HmacAuthenticationService());
@@ -92,7 +99,7 @@ $serviceBroker
 ```
 
 ### Extend any existing service with your implementation
-
+Usually, if class doesn't support certain operation, it throws **UnsupportedOperationException**. CommandManager doesn't stop the execution here, but finds the next register class/closure for the service and gives it a chance to execute the operation. This feature can be used to extend existing services.
 ```php
 class ExtendedUserService {
     public function findExpiredAccounts() {
@@ -107,6 +114,7 @@ $serviceBroker->service('User')->findExpiredAccounts();
 ```
 
 ### Listen to services
+It is often important to be able to listen to when an operation is being invoked. ServiceBroker provides an instance of EventManager and automatically triggers events before and after operation has been invoked. EventManagerAware service classes can also trigger events of their own.
 ```php
 $serviceBroker
 	->getEventManager()
