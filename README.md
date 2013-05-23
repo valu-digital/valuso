@@ -4,9 +4,8 @@ ValuSo is a Zend Framework 2 module for service oriented application architectur
 
 ## Installation
 
-Use [Composer](http://getcomposer.org/) to install 
-[`valu/valuso` package](https://packagist.org/packages/valu/valuso).
-
+Use [Composer](http://getcomposer.org/) and install package
+[`valu/valuso`](https://packagist.org/packages/valu/valuso):
 ```sh
 php composer.phar require valu/valuso
 ```
@@ -61,8 +60,8 @@ Response
 ### Easy to use existing classes as services
 ServiceBroker expects that the class registered as a service provides **__invoke()** method. In most cases the classes don't implement this method, which indicates the ServiceBroker (or ServicePluginManager to be exact) that these services should be wrapped with a special **proxy class**. With this feature, it is possible to use almost any existing class as a service.
 ```php
-// Assume that LoggerServiceFactory is registered
-// for service locator with service ID 'ZendLogger'
+// Assume that service with ID 'ZendLogger' is registered
+// to ServiceManager
 $serviceBroker
 	->getLoader()
 	->register('ZendLogger', 'Log');
@@ -337,4 +336,3 @@ $config = [
   ]
 ],
 ```
-
