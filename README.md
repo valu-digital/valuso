@@ -82,7 +82,7 @@ class UserService {
 ```
 
 ### Multiple respondents for one service
-Often there is only one class or closure per service, but ValuSo is not limited to that. You can actually register any number of classes/closures for the same service name.
+Often there is only one class or closure per service, but the architecture is not limited to that. You can actually register any number of classes/closures for the same service name.
 ```php
 $loader = $serviceBroker->getLoader();
 $loader->registerService('HmacAuth', 'Auth', new HmacAuthenticationService());
@@ -99,7 +99,7 @@ $serviceBroker
 ```
 
 ### Extend any existing service with your implementation
-Usually, if class doesn't support certain operation, it throws **UnsupportedOperationException**. CommandManager doesn't stop the execution here, but finds the next register class/closure for the service and gives it a chance to execute the operation. This feature can be used to extend existing services.
+Usually, if class doesn't support certain operation, it throws **UnsupportedOperationException**. CommandManager doesn't stop the execution here, but finds the next registered class/closure for the service and gives it a chance to execute the operation. This feature can be used to extend existing services.
 ```php
 class ExtendedUserService {
     public function findExpiredAccounts() {
