@@ -259,7 +259,7 @@ class ServiceProxyGenerator
             $aliases = $this->getOperationConfig($name, 'aliases');
             $aliases[] = $name;
             
-            $invokeSpecs[$name] = ['assoc' => [], 'numeric' => [], 'aliases' => $aliases];
+            $invokeSpecs[$name] = ['params' => [], 'aliases' => $aliases];
         
             $index = 0;
             foreach ($method->getParameters() as $param) {
@@ -269,8 +269,7 @@ class ServiceProxyGenerator
                     $defaultValue = 'null';
                 }
         
-                $invokeSpecs[$name]['assoc'][] = '$command->getParam("'.$param->getName().'", '.$defaultValue.')';
-                $invokeSpecs[$name]['numeric'][] = '$command->getParam('.$index.', '.$defaultValue.')';
+                $invokeSpecs[$name]['params'][] = '$command->getParam("'.$param->getName().'", $command->getParam('.$index.', '.$defaultValue.'))';
                 
                 $index++;
             }
@@ -293,7 +292,6 @@ class ServiceProxyGenerator
         '    $this->__wrappedObject->setIdentity($command->getIdentity());' . "\n".
         '}' . "\n\n";
         
-        $invokeImpl .= '$isAssoc = !$command->hasParam(0);' . "\n";
         $invokeImpl .= 'switch ($command->getOperation()) {' . "\n";
         
         foreach ($invokeSpecs as $methodName => $specs) {
@@ -317,15 +315,10 @@ class ServiceProxyGenerator
             }
         
             // Generate invokation code 
-            if (!sizeof($specs['assoc'])) {
+            if (!sizeof($specs['params'])) {
                 $invokeImpl .= '        $result = $this->' . $methodName . "();\n";
             } else {
-        
-                $invokeImpl .= '        if ($isAssoc) {' . "\n"
-                            .  '            $result = $this->' . $methodName . '(' . implode(', ', $specs['assoc']) . ");\n"
-                            .  '        } else {' . "\n"
-                            .  '            $result = $this->' . $methodName . '(' . implode(', ', $specs['numeric']) . ");\n"
-                            .  '        }' . "\n";
+                $invokeImpl .= '        $result = $this->' . $methodName . '(' . implode(', ', $specs['params']) . ");\n";
             }
         
             $invokeImpl .=    '        array_pop($this->__commandStack);' . "\n"
