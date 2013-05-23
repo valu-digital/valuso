@@ -1,6 +1,6 @@
 # ValuSo
 
-ValuSo is a Zend Framework 2 module for service oriented application architecture.
+ValuSo is a [Zend Framework 2](http://framework.zend.com) module for service oriented application architecture.
 
 ## Installation
 
