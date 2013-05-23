@@ -13,7 +13,7 @@ $service->create('administrator');
 ```
 
 ### Invoke services via HTTP
-ValuSo provides end points (controllers) for HTTP REST and RPC interfaces. The difference between these two interfaces is minor and you should stick to using either one. The interfaces return responses in JSON format. They also accept request parameters in JSON format, using special **q** parameter.
+ValuSo provides end points (controllers) for HTTP REST and RPC interfaces. The difference between these two interfaces is minor and you should stick to using either one. Both interfaces return responses in JSON format.
 
 **Using RPC interface to find a user:**
 ```
