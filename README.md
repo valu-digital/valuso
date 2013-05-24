@@ -232,6 +232,8 @@ As you can see, on the first line it calls the real method implementation and th
 
 You cannot call these proxy methods normally from within the real class. It is however, made possible via special **proxy()** method. The reason for this is, that without using the proxy() method it is not possible to call another method and still trigger its events etc.
 
+If proxy instance is not available, the proxy() method returns reference to `$this`. This pattern ensures that the service can be tested and used also without the proxy instance.
+
 ```php
 class UserService
 {
