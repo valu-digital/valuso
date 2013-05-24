@@ -16,7 +16,7 @@ Type `dev-master`, when asked which version to install. Now it is ready to be us
 
 > Defines an application's boundary with a layer of services that establishes a set of available operations and coordinates the application's response in each operation. - [Randy Stafford, EAA](http://martinfowler.com/eaaCatalog/serviceLayer.html)
 
-In ValuSo the service layer is implemented using `service broker`, which passes operations to correct service implementations and collects their responses. The operations of these services are available via service broker. When an operation is executed, the  service broker calls the registered **closure** or **__invoke** method of the service class. If __invoke is not available, the service class is wrapped with a special **proxy class**, that implements the __invoke method by mapping the operation name to method name.
+In ValuSo the service layer is implemented using `service broker`, which passes operations to correct service implementations and collects their responses. When an operation is invoked, the  service broker calls the registered `closure` or `__invoke` method of service class. If __invoke is not available, the service class is wrapped with a special **proxy class**, that implements the __invoke method by mapping the operation name to method name.
 
 The consumer of a service doesn't know who actually implements the service and where.
 
