@@ -16,9 +16,9 @@ Type `dev-master`, when asked which version to install. Now it is ready to be us
 
 > Defines an application's boundary with a layer of services that establishes a set of available operations and coordinates the application's response in each operation. - [Randy Stafford, EAA](http://martinfowler.com/eaaCatalog/serviceLayer.html)
 
-In ValuSo the service layer is implemented using `service broker`, which passes operations to correct service implementations and collects their responses. When an operation is invoked, the  service broker calls the registered `closure` or `__invoke` method of service class. If __invoke is not available, the service class is wrapped with a special **proxy class**, that implements the __invoke method by mapping the operation name to method name.
+In ValuSo the service layer is implemented using `service broker`, which passes operations to correct service implementations and collects their responses. When an operation is invoked, the  service broker calls the registered `closure` or `__invoke` method of service class. If __invoke is not available, the service class is wrapped with a special `proxy class`, that implements the __invoke method by mapping the operation name to method name.
 
-The consumer of a service doesn't know who actually implements the service and where.
+The consumer of a service doesn't know who actually implements the service and where (locally or in an external system).
 
 The concept and implementation of the service layer is similar to router/controller interaction in MVC pattern.  However, they operate on different levels. Controller is an endpoint that receives the user’s (or client’s) raw request (e.g. from HTTP). Controller then needs to decide who is actually responsible of processing the request. With service layer available, the controller calls appropriate services and returns response that may actually be an aggregation of multiple responses from different services.
 
