@@ -118,7 +118,7 @@ class ServiceBroker{
 	/**
 	 * Retrieve default identity
 	 * 
-	 * @return \ArrayAccess
+	 * @return \ArrayAccess|null
 	 */
 	public function getDefaultIdentity()
 	{
@@ -138,6 +138,8 @@ class ServiceBroker{
 	            
 	            if ($this->defaultIdentity instanceof \ArrayObject) {
 	                $this->defaultIdentity->setFlags(\ArrayObject::ARRAY_AS_PROPS);
+	            } elseif(!$this->defaultIdentity) {
+	                return new \ArrayObject([]);
 	            }
 	        }
 	        
