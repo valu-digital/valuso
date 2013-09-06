@@ -50,6 +50,27 @@ return [
             ],
         ]
     ],
+    'console' => [
+        'router' => [
+            'routes' => [
+                'service' => [
+                    'options' => [
+                        'route'    => 'exec <service> <operation> [<query>] [--verbose|-v] [--user=|u=] [--password=|-p=] [--silent|-s]',
+                        'defaults' => [
+                            'controller' => 'ValuSoServiceController',
+                            'action'     => 'console',
+                            'identity'   => [
+                                'username' => 'administrator',
+                                'superuser' => true,
+                                'roles' => ['/' => 'superuser']
+                            ],
+                            '_authenticate' => true
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ],
     'valu_so' => [
         'proxy_dir' => 'data/valuso/proxy',
         'use_main_locator' => true,

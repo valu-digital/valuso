@@ -16,6 +16,7 @@ use Zend\Json\Json;
 use Zend\Http\Header\HeaderInterface;
 use Zend\Http\PhpEnvironment\Response;
 use Zend\Console\Request as ConsoleRequest;
+use Zend\Console\Response as ConsoleResponse;
 
 /**
  * Service controller
@@ -221,8 +222,9 @@ class ServiceController extends AbstractActionController
 	        throw new \RuntimeException('You can only use this action from a console!');
 	    }
 	    
-	    // Check verbose flag
+	    // Check flags
 	    $verbose = $request->getParam('verbose') || $request->getParam('v');
+	    $silent = $request->getParam('silent') || $request->getParam('s');
 	    
 	    $params = Json::decode(
             $query,
@@ -230,10 +232,10 @@ class ServiceController extends AbstractActionController
         );
 	    
 	    try {
-	        $data = $this->exec($service, $operation, $params, ServiceBroker::CONTEXT_CLI);
-	        return $this->prepareConsoleResponse($data, null, $verbose);
+	        $data = $this->exec($service, $operation, $params, Command::CONTEXT_CLI);
+	        return $this->prepareConsoleResponse($data, null, $verbose, $silent);
 	    } catch (\Exception $exception) {
-	        return $this->prepareConsoleResponse(null, $exception, $verbose);
+	        return $this->prepareConsoleResponse(null, $exception, $verbose, $silent);
 	    }
 	}
 	
@@ -339,9 +341,13 @@ class ServiceController extends AbstractActionController
 	 * @param mixed $data
 	 * @param \Exception|null $exception
 	 * @param boolean $verbose
+	 * @param boolean $silent
+	 * @return ConsoleResponse
 	 */
-	protected function prepareConsoleResponse($data, \Exception $exception = null, $verbose = false)
+	protected function prepareConsoleResponse($data, \Exception $exception = null, $verbose = false, $silent = false)
 	{
+	    $response = new ConsoleResponse();
+	    
 	    if ($exception) {
 	        
 	        if ($verbose) {
@@ -350,15 +356,25 @@ class ServiceController extends AbstractActionController
 	            $msg = $exception->getMessage();
 	        }
 	        
-	        return "Error: " . $msg . "\n";
+	        if (!$silent) {
+	            $response->setContent("Error: " . $msg . "\n");
+	        }
+	        
+	        $response->setErrorLevel($exception->getCode());
 	    }
 	    
 	    if (is_array($data) || is_object($data)) {
 	        $json = JsonEncoder::encode($data, true);
-	        return Json::prettyPrint($json) . "\n";
-	    } else {
-	        return $data;
+	        $data = Json::prettyPrint($json) . "\n";
+	    } else if (is_scalar($data)) {
+	        $data = (string)$data."\n";
 	    }
+	    
+	    if (!$silent) {
+	        $response->setContent($data);
+	    }
+	    
+	    return $response;
 	}
 	
 	/**
