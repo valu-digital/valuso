@@ -53,6 +53,7 @@ class Module
                 array( '--user|-u', 'Username', 'If username is omitted, it will be prompted'),
                 array( '--password|-p', 'Password', 'If password is omitted, it will be prompted'),
                 array( '--verbose|-v', 'Verbose mode', 'Display additional error information' ),
+                array( '--silent|-s', 'Silent mode', 'Do not display output messages' ),
         );
     }
 }
