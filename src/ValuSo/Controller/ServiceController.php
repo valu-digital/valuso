@@ -235,6 +235,8 @@ class ServiceController extends AbstractActionController
 	        $data = $this->exec($service, $operation, $params, Command::CONTEXT_CLI);
 	        return $this->prepareConsoleResponse($data, null, $verbose, $silent);
 	    } catch (\Exception $exception) {
+	        error_log($exception->getMessage() . ' (' . $exception->getFile().':'.$exception->getLine().')');
+	        
 	        return $this->prepareConsoleResponse(null, $exception, $verbose, $silent);
 	    }
 	}
