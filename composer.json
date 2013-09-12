@@ -10,6 +10,7 @@
 		"zend framework",
 		"zend framework 2"
 	],
+	"homepage" : "http://www.mediacabinet.fi/",
 	"license" : [
 		"BSD-3-Clause"
 	],
