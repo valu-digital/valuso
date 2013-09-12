@@ -1,16 +1,27 @@
 {
-    "name": "valu/valuso",
-    "version": "0.9.0",
-    "license": "BSD-3-Clause",
-    "type": "library",
-    "keywords": [
-        "valu", "service", "service layer", "zend framework", "zend framework 2"
-    ],
-    "description": "Zend Framework 2 module for service oriented application architecture",
-    "require": {
-        "php": "5.4.*",
-    	"zendframework/zendframework": "2.*",
-    	"doctrine/common": ">=2.1"
-    }
+	"name" : "valu/valuso",
+	"description" : "Zend Framework 2 module for service oriented application architecture",
+	"version" : "0.9.0",
+	"type" : "library",
+	"keywords" : [
+		"valu",
+		"service",
+		"service layer",
+		"zend framework",
+		"zend framework 2"
+	],
+	"license" : [
+		"BSD-3-Clause"
+	],
+	"require" : {
+		"php" : "5.4.*",
+		"doctrine/common" : ">=2.1",
+		"zendframework/zendframework" : "2.*"
+	},
+	"autoload" : {
+		"psr-0" : {
+			"ValuSo\\" : "src/",
+			"ValuSoTest\\" : "tests/"
+		}
+	}
 }
-
