@@ -9,6 +9,12 @@ use Zend\Cache\Storage\ClearByPrefixInterface;
 
 class SetupService extends AbstractSetupService
 {
+    
+    public function getPriority()
+    {
+        return 100000;
+    }
+    
     public function setup(array $options = array())
     {
         $this->clearCache();
