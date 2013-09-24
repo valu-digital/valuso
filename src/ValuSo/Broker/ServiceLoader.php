@@ -357,6 +357,25 @@ class ServiceLoader{
 	{
 	    return array_keys($this->services);
 	}
+	
+	/**
+	 * Retrieve options for service
+	 * 
+	 * @param string $id
+	 * @throws Exception\ServiceNotFoundException
+	 */
+	public function getServiceOptions($id)
+	{
+	    $id = $this->normalizeServiceId($id);
+	    
+	    if(!isset($this->services[$id])){
+	        throw new Exception\ServiceNotFoundException(
+                sprintf('Service ID "%s" does not exist', $id)
+	        );
+	    }
+	    
+	    return $this->services[$id]['options'];
+	}
 
 	/**
 	 * Test if a service exists

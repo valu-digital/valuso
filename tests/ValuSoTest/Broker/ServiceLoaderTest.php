@@ -116,6 +116,12 @@ class ServiceLoaderTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(['opt' => 'value'], $this->serviceLoader->load('testid')->config);
     }
     
+    public function testGetServiceOptions()
+    {
+        $this->serviceLoader->registerService('testid', 'testservice', self::CLOSURE_SERVICE_CLASS, ['opt' => 'value']);
+        $this->assertEquals(['opt' => 'value'], $this->serviceLoader->getServiceOptions('testid'));
+    }
+    
     /**
      * @expectedException ValuSo\Exception\InvalidServiceException
      */
