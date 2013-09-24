@@ -191,7 +191,7 @@ class ServiceBroker{
 	 * If servive loader is not set, initializes new
 	 * ServiceServiceLoader instance and returns it.
 	 * 
-	 * @return ServiceLoader
+	 * @return \ValuSo\Broker\ServiceLoader
 	 */
 	public function getLoader()
 	{
