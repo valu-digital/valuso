@@ -9,6 +9,7 @@ use ValuSo\Annotation as ValuService;
 use Zend\Cache\Storage\StorageInterface as Cache;
 use \ReflectionClass;
 use \ReflectionMethod;
+use \Zend\Code\Reflection\DocBlockReflection;
 
 class MetaService
     implements ServiceLocatorAwareInterface
@@ -67,7 +68,8 @@ class MetaService
         }
         
         $description = [];
-        $description['service_id'] = $serviceId;
+        $description['id'] = $serviceId;
+        $description['name'] = $loader->getServiceName($serviceId);
         
         if (!is_callable($service)) {
             $specs = $this->getAnnotationBuilder()->getServiceSpecification($service);
@@ -212,9 +214,24 @@ class MetaService
         
             $name = $method->getName();
             
+            if ($method->getDocComment()) {
+                $docBlock = new DocBlockReflection($method);
+                $tags = $docBlock->getTags('param');
+                
+                $operations[$name]['short_description'] = $docBlock->getShortDescription();
+                $operations[$name]['long_description'] = $docBlock->getLongDescription();
+            } else {
+                $tags = [];
+                $docBlock = null;
+            }
+            
             // This operation is not available
             if (!isset($operations[$name])) {
                 continue;
+            }
+            
+            if (!isset($operations[$name]['contexts'])) {
+                $operations[$name]['contexts'] = ['native'];
             }
         
             $params = [];
@@ -227,6 +244,13 @@ class MetaService
                     $specs['required'] = true;
                 } else {
                     $specs['required'] = true; 
+                }
+                
+                foreach ($tags as $tag) {
+                    if ($tag->getVariableName() === '$'.$param->getName()) {
+                        $specs['types'] = $tag->getTypes();
+                        $specs['description'] = $tag->getDescription();
+                    }
                 }
                 
                 $params[] = $specs;
