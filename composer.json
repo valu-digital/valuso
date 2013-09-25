@@ -15,7 +15,6 @@
 		"BSD-3-Clause"
 	],
 	"require" : {
-		"phpdocumentor/reflection-docblock" : "2.0.*@dev",
 		"php" : ">=5.4.0",
 		"doctrine/common" : ">=2.1",
 		"zendframework/zendframework" : ">=2.0"
@@ -25,5 +24,8 @@
 			"ValuSo\\" : "src/",
 			"ValuSoTest\\" : "tests/"
 		}
+	},
+	"suggests" : {
+		"phpdocumentor/reflection-docblock" : "2.0.*@dev"
 	}
 }
