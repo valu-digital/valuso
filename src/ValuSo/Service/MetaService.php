@@ -6,10 +6,12 @@ use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 use ValuSo\Annotation\AnnotationBuilder;
 use ValuSo\Annotation as ValuService;
+use Zend\Cache\Storage\StorageInterface as Cache;
 
 class MetaService
     implements ServiceLocatorAwareInterface
 {
+    const CACHE_ID_PREFIX = 'valu_so_meta_';
     
     /**
      * @var ServiceLocatorInterface
@@ -31,14 +33,28 @@ class MetaService
     protected $serviceBroker;
     
     /**
+     * Cache adapter
+     * 
+     * @var \Zend\Cache\Storage\StorageInterface
+     */
+    protected $cache;
+    
+    /**
      * Retrieve service description
      * 
      * @param string $serviceId Service ID
      * 
-     * @ValuService\Context({"cli", "http-get"})
+     * @ValuService\Context({"cli", "http", "http-get"})
      */
     public function describe($serviceId)
     {
+        $cache = $this->getCache();
+        $cacheId = self::CACHE_ID_PREFIX . $serviceId;
+        
+        if ($cache && ($description = $this->getCache()->getItem($cacheId))) {
+            return $description;
+        }
+        
         $loader = $this->getServiceLoader();
         $options = $loader->getServiceOptions($serviceId);
         
@@ -50,14 +66,29 @@ class MetaService
         
         $description = [];
         $description['service_id'] = $serviceId;
-        if (is_callable($service)) {
-            return $description;
+        
+        if (!is_callable($service)) {
+            $specs = $this->getAnnotationBuilder()->getServiceSpecification($service);
+            $specs = $specs->getArrayCopy();
+            $description = array_merge($specs, $description);
         }
         
-        $specs = $this->getAnnotationBuilder()->getServiceSpecification($service);
-        $specs = $specs->getArrayCopy();
+        // Convert associative 'operations' array into numeric array
+        if (isset($description['operations'])) {
+            
+            $operationsArray = [];
+            foreach ($description['operations'] as $name => $specs) {
+                $specs['name'] = $name;
+                $operationsArray[] = $specs;
+            }
+            
+            $description['operations'] = $operationsArray;
+        }
         
-        $description = array_merge($specs, $description);
+        if ($cache) {
+            $cache->setItem($cacheId, $description);
+        }
+        
         return $description;
     }
     
@@ -68,7 +99,7 @@ class MetaService
      * @param array $services
      * @return array
      * 
-     * @ValuService\Context({"cli", "http-get"})
+     * @ValuService\Context({"cli", "http", "http-get"})
      */
     public function describeMany(array $services)
     {
@@ -85,7 +116,7 @@ class MetaService
      * 
      * @return array
      * 
-     * @ValuService\Context({"cli", "http-get"})
+     * @ValuService\Context({"cli", "http", "http-get"})
      */
     public function describeAll()
     {
@@ -129,6 +160,10 @@ class MetaService
      */
     public function getServiceBroker()
     {
+        if (!$this->serviceBroker) {
+            $this->setServiceBroker($this->getServiceLocator()->get('ServiceBroker'));
+        }
+        
         return $this->serviceBroker;
     }
     
@@ -146,6 +181,20 @@ class MetaService
     public function setAnnotationBuilder(AnnotationBuilder $annotationBuilder)
     {
         $this->annotationBuilder = $annotationBuilder;
+    }
+    
+    public function setCache(Cache $cache)
+    {
+        $this->cache = $cache;
+    }
+    
+    public function getCache()
+    {
+        if (!$this->cache) {
+            $this->setCache($this->getServiceLocator()->get('ObjectCache'));
+        }
+        
+        return $this->cache;
     }
     
     /**

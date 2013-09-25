@@ -86,6 +86,10 @@ return [
                 'name' => 'Batch',
                 'class' => 'ValuSo\\Service\\BatchService',
             ],
+            'ValuSoMeta' => [
+                'name' => 'Meta',
+                'class' => 'ValuSo\\Service\\MetaService',
+            ],
         ]
     ]
 ];
