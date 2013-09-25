@@ -7,6 +7,8 @@ use Zend\ServiceManager\ServiceLocatorInterface;
 use ValuSo\Annotation\AnnotationBuilder;
 use ValuSo\Annotation as ValuService;
 use Zend\Cache\Storage\StorageInterface as Cache;
+use \ReflectionClass;
+use \ReflectionMethod;
 
 class MetaService
     implements ServiceLocatorAwareInterface
@@ -51,7 +53,7 @@ class MetaService
         $cache = $this->getCache();
         $cacheId = self::CACHE_ID_PREFIX . $serviceId;
         
-        if ($cache && ($description = $this->getCache()->getItem($cacheId))) {
+        if ($cache && false && ($description = $this->getCache()->getItem($cacheId))) {
             return $description;
         }
         
@@ -73,16 +75,11 @@ class MetaService
             $description = array_merge($specs, $description);
         }
         
+        $reflectionClass = new ReflectionClass($service);
+        
         // Convert associative 'operations' array into numeric array
         if (isset($description['operations'])) {
-            
-            $operationsArray = [];
-            foreach ($description['operations'] as $name => $specs) {
-                $specs['name'] = $name;
-                $operationsArray[] = $specs;
-            }
-            
-            $description['operations'] = $operationsArray;
+            $description['operations'] = $this->decorateOperations($reflectionClass, $description['operations']);
         }
         
         if ($cache) {
@@ -203,5 +200,53 @@ class MetaService
     protected function getServiceLoader()
     {
         return $this->getServiceBroker()->getLoader();
+    }
+    
+    private function decorateOperations(ReflectionClass $reflectionClass, $operations)
+    {
+        $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
+        $methodAliases      = array();
+        
+        // Loop through all PUBLIC methods this time to generate invoke mapping
+        foreach ($reflectionMethods as $method) {
+        
+            $name = $method->getName();
+            
+            // This operation is not available
+            if (!isset($operations[$name])) {
+                continue;
+            }
+        
+            $params = [];
+            foreach ($method->getParameters() as $param) {
+                
+                $specs['name'] = $param->getName();
+                
+                if ($param->isDefaultValueAvailable()) {
+                    $specs['default'] = var_export($param->getDefaultValue(), true);
+                    $specs['required'] = true;
+                } else {
+                    $specs['required'] = true; 
+                }
+                
+                $params[] = $specs;
+            }
+        
+            $operations[$name]['params'] = $params;
+        }
+        
+        $operationsArray = [];
+        foreach ($operations as $name => $specs) {
+            
+            // Skip operations beginning with two underscores
+            if (strpos($name, '__') === 0) {
+                continue;
+            }
+            
+            $specs['name'] = $name;
+            $operationsArray[] = $specs;
+        }
+        
+        return $operationsArray;
     }
 }
