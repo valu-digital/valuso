@@ -204,59 +204,21 @@ class MetaService
         return $this->getServiceBroker()->getLoader();
     }
     
-    private function decorateOperations(ReflectionClass $reflectionClass, $operations)
+    private function decorateOperations(ReflectionClass $class, $operations)
     {
-        $reflectionMethods  = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
-        $methodAliases      = array();
+        $reflectionMethods = $class->getMethods(ReflectionMethod::IS_PUBLIC);
         
         // Loop through all PUBLIC methods this time to generate invoke mapping
         foreach ($reflectionMethods as $method) {
         
             $name = $method->getName();
             
-            if ($method->getDocComment()) {
-                $docBlock = new DocBlockReflection($method);
-                $tags = $docBlock->getTags('param');
-                
-                $operations[$name]['short_description'] = $docBlock->getShortDescription();
-                $operations[$name]['long_description'] = $docBlock->getLongDescription();
-            } else {
-                $tags = [];
-                $docBlock = null;
-            }
-            
             // This operation is not available
             if (!isset($operations[$name])) {
                 continue;
             }
             
-            if (!isset($operations[$name]['contexts'])) {
-                $operations[$name]['contexts'] = ['native'];
-            }
-        
-            $params = [];
-            foreach ($method->getParameters() as $param) {
-                
-                $specs['name'] = $param->getName();
-                
-                if ($param->isDefaultValueAvailable()) {
-                    $specs['default'] = var_export($param->getDefaultValue(), true);
-                    $specs['required'] = true;
-                } else {
-                    $specs['required'] = true; 
-                }
-                
-                foreach ($tags as $tag) {
-                    if ($tag->getVariableName() === '$'.$param->getName()) {
-                        $specs['types'] = $tag->getTypes();
-                        $specs['description'] = $tag->getDescription();
-                    }
-                }
-                
-                $params[] = $specs;
-            }
-        
-            $operations[$name]['params'] = $params;
+            $this->decorateOperation($method, $operations[$name]);
         }
         
         $operationsArray = [];
@@ -272,5 +234,61 @@ class MetaService
         }
         
         return $operationsArray;
+    }
+    
+    private function decorateOperation(ReflectionMethod $method, $operation)
+    {
+        if ($method->getDocComment()) {
+            $docBlock = new DocBlockReflection($method);
+            $paramTags = $docBlock->getTags('param');
+        
+            $operation['short_description'] = $docBlock->getShortDescription();
+            $operation['long_description'] = $docBlock->getLongDescription();
+        
+            $returnTags = $docBlock->getTags('return');
+            if (sizeof($returnTags)) {
+                $returnTag = array_pop($returnTags);
+                $operation['return_types'] = $returnTag->getTypes();
+                $operation['return_description'] = $returnTag->getDescription();
+            }
+        
+        } else {
+            $paramTags = [];
+            $docBlock = null;
+        }
+
+        if (!isset($operation['contexts'])) {
+            $operation['contexts'] = ['native'];
+        } else if(is_string($operation['contexts'])) {
+            $operation['contexts'] = [$operation['contexts']];
+        }
+        
+        $params = [];
+        foreach ($method->getParameters() as $param) {
+        
+            $specs['name'] = $param->getName();
+        
+            if ($param->isDefaultValueAvailable()) {
+                $specs['default'] = var_export($param->getDefaultValue(), true);
+                $specs['required'] = true;
+            } else {
+                $specs['required'] = true;
+            }
+        
+            foreach ($paramTags as $tag) {
+                if ($tag->getVariableName() === '$'.$param->getName()) {
+                    $specs['types'] = $tag->getTypes();
+                    $specs['description'] = $tag->getDescription();
+                }
+            }
+            
+            if (!isset($specs['types'])) {
+                $specs['types'] = ['mixed'];
+            }
+        
+            $params[] = $specs;
+        }
+        
+        $operation['params'] = $params;
     }
 }
