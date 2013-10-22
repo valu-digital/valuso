@@ -356,12 +356,13 @@ class ServicePluginManager extends AbstractPluginManager
     public function wrapService($serviceId, $instance)
     {
         $serviceId = $this->canonicalizeName($serviceId);
+        $proxy = null;
         
         if (($fqcn = $this->getCache()->getItem(self::CACHE_ID_PREFIX . $serviceId)) 
              && class_exists($fqcn) 
              && $this->getProxyAutoCreateStrategy() !== self::PROXY_AUTO_CREATE_ALWAYS) {
             
-            return new $fqcn($instance);
+            $proxy = new $fqcn($instance);
         } else {
             $className      = get_class($instance);
             $proxyGenerator = $this->getProxyGenerator();
@@ -395,19 +396,19 @@ class ServicePluginManager extends AbstractPluginManager
             $proxy = new $fqcn($instance);
             
             $this->getCache()->setItem(self::CACHE_ID_PREFIX . $serviceId, $fqcn);
-            
-            // Run initializers for the proxy class
-            foreach ($this->initializers as $initializer) {
-                if ($initializer instanceof InitializerInterface) {
-                    $initializer->initialize($proxy, $this);
-                } elseif (is_object($initializer) && is_callable($initializer)) {
-                    $initializer($proxy, $this);
-                } else {
-                    call_user_func($initializer, $proxy, $this);
-                }
-            }
-            
-            return $proxy;
         }
+        
+        // Run initializers for the proxy class
+        foreach ($this->initializers as $initializer) {
+            if ($initializer instanceof InitializerInterface) {
+                $initializer->initialize($proxy, $this);
+            } elseif (is_object($initializer) && is_callable($initializer)) {
+                $initializer($proxy, $this);
+            } else {
+                call_user_func($initializer, $proxy, $this);
+            }
+        }
+        
+        return $proxy;
     }
 }
