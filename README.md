@@ -1,5 +1,7 @@
 # ValuSo
 
+[![Build Status](https://travis-ci.org/mediacabinet/valuso.png?branch=master)](http://travis-ci.org/mediacabinet/valuso)
+
 ValuSo is a [Zend Framework 2](http://framework.zend.com) module for service oriented application architecture.
 
 ## Installation
