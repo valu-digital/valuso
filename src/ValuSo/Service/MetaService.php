@@ -54,7 +54,7 @@ class MetaService
         $cache = $this->getCache();
         $cacheId = self::CACHE_ID_PREFIX . $serviceId;
         
-        if ($cache && false && ($description = $this->getCache()->getItem($cacheId))) {
+        if ($cache && ($description = $this->getCache()->getItem($cacheId))) {
             return $description;
         }
         
