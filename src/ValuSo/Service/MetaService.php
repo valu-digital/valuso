@@ -189,7 +189,7 @@ class MetaService
     
     public function getCache()
     {
-        if (!$this->cache) {
+        if (!$this->cache && $this->getServiceLocator()) {
             $this->setCache($this->getServiceLocator()->get('ObjectCache'));
         }
         
