@@ -13,6 +13,7 @@ use Zend\EventManager\ResponseCollection;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\JsonModel;
 use Zend\Json\Json;
+use Zend\Json\Decoder as JsonDecoder;
 use Zend\Http\Header\HeaderInterface;
 use Zend\Http\PhpEnvironment\Response;
 use Zend\Console\Request as ConsoleRequest;
@@ -97,6 +98,12 @@ class ServiceController extends AbstractActionController
     const STATUS_SUCCESS = 200;
     
     /**
+     * HTTP status code for malformatted request
+     * @var int
+     */
+    const STATUS_MALFORMED_REQUEST = 400;
+    
+    /**
      * HTTP status code for "not found" exceptions
      * @var int
      */
@@ -177,13 +184,20 @@ class ServiceController extends AbstractActionController
                 throw new OperationNotFoundException("Route doesn't contain operation information");
             }
             
-            $params = $this->fetchParams();
+            try {
+                $params = $this->fetchParams();
+            } catch(\Exception $e) {
+                $status = self::STATUS_MALFORMED_REQUEST;
+                $exception = $e;
+            }
             
-            $data = $this->exec(
-                    $service, 
-                    $operation, 
-                    $params, 
-                    Command::CONTEXT_HTTP);
+            if ($status === self::STATUS_SUCCESS) {
+                $data = $this->exec(
+                        $service,
+                        $operation,
+                        $params,
+                        Command::CONTEXT_HTTP);
+            }
             
         } catch (PermissionDeniedException $exception) {
             $status = self::STATUS_PERMISSION_DENIED;
@@ -418,6 +432,8 @@ class ServiceController extends AbstractActionController
             
             if (!$operation) {
                 $operation = 'http-'.$this->getRequest()->getMethod();
+            } else {
+                $operation = $operation->getFieldValue();
             }
             
             return $this->parseCanonicalName($operation);
@@ -431,22 +447,28 @@ class ServiceController extends AbstractActionController
 	 */
 	protected function fetchParams()
 	{
-	    // Parse parameters
-	    if ($this->getRequest()->isPost()) {
-	        $params = $this->getRequest()
-    	        ->getPost()
-    	        ->toArray();
-	    
-	        $params = array_merge(
-	                $params,
-	                $this->getRequest()
-	                ->getFiles()
-	                ->toArray()
-	        );
+	    $contentType = $this->getRequest()->getHeaders()->get('Content-Type');
+	    if ($contentType && strtolower($contentType->getFieldValue()) === 'application/json') {
+	        $json = $this->getRequest()->getContent();
+	        $params = JsonDecoder::decode($json, JSON::TYPE_ARRAY);
 	    } else {
-	        $params = $this->getRequest()
+	        // Parse parameters
+	        if ($this->getRequest()->isPost()) {
+	            $params = $this->getRequest()
+	            ->getPost()
+	            ->toArray();
+	             
+	            $params = array_merge(
+	                    $params,
+	                    $this->getRequest()
+	                    ->getFiles()
+	                    ->toArray()
+	            );
+	        } else {
+	            $params = $this->getRequest()
 	            ->getQuery()
 	            ->toArray();
+	        }
 	    }
 	    
 	    // Use special 'q' parameters instead, if specified

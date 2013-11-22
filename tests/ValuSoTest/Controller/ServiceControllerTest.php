@@ -45,6 +45,9 @@ class ServiceControllerTest extends TestCase
                 case 'intOneResponse':
                     return 1;
                     break;
+                case 'paramTestResponse':
+                    return $command->getParam('test');
+                    break;
                 default:
                     throw new OperationNotFoundException('Unsupported operation');
                     break;
@@ -149,6 +152,39 @@ class ServiceControllerTest extends TestCase
         $this->assertEquals(
             404,
             $this->event->getResponse()->getStatusCode());
+    }
+    
+    public function testJsonRequest()
+    {
+        $this->request->getHeaders()->addHeaders([
+            'Content-Type' => 'application/json']);
+        
+        $this->request->setContent('{"test": "success \'ä\'/\"ö\""}');
+        
+        $this->setUpRouteMatch('param-test-response');
+    
+        $response = $this->responseJsonToArray($this->event->getResponse());
+        $this->assertEquals(
+                ['d' => "success 'ä'/\"ö\""],
+                $response);
+    
+        $this->assertEquals(
+                200,
+                $this->event->getResponse()->getStatusCode());
+    }
+    
+    public function testMalformattedJsonRequest()
+    {
+        $this->request->getHeaders()->addHeaders([
+                'Content-Type' => 'application/json']);
+        
+        $this->request->setContent('{"test: "success"}');
+        
+        $this->setUpRouteMatch('param-test-response');
+        
+        $this->assertEquals(
+                400,
+                $this->event->getResponse()->getStatusCode());
     }
     
     private function setUpExceptionTest($errorMode)
