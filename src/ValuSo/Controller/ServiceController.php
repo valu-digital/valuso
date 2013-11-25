@@ -7,17 +7,16 @@ use ValuSo\Exception\ServiceNotFoundException;
 use ValuSo\Exception\NotFoundException;
 use ValuSo\Exception\PermissionDeniedException;
 use ValuSo\Exception\ServiceException;
-use ValuSo\Broker\ServiceBroker;
 use ValuSo\Json\Encoder as JsonEncoder;
-use Zend\EventManager\ResponseCollection;
 use Zend\Mvc\Controller\AbstractActionController;
-use Zend\View\Model\JsonModel;
 use Zend\Json\Json;
 use Zend\Json\Decoder as JsonDecoder;
 use Zend\Http\Header\HeaderInterface;
 use Zend\Http\PhpEnvironment\Response;
 use Zend\Console\Request as ConsoleRequest;
 use Zend\Console\Response as ConsoleResponse;
+use Exception;
+use Zend\Json\Exception\RecursionException;
 
 /**
  * Service controller
@@ -145,6 +144,12 @@ class ServiceController extends AbstractActionController
      * @var string
      */
     const HEADER_ERRORS_DEFAULT = 'default';
+    
+    /**
+     * Error message for cyclic references
+     * @var string
+     */
+    const CYCLIC_DATA_ERROR = 'Response data contains cyclic references that cannot be presented in JSON format';
 	
 	/**
 	 * PREG pattern to validate service name against
@@ -346,7 +351,33 @@ class ServiceController extends AbstractActionController
 	            }
 	        }
 	        
-	        $response->setContent(JsonEncoder::encode($responseModel, true));
+	        try {
+	            $response->setContent(JsonEncoder::encode($responseModel, true));
+	        } catch (Exception $e) {
+	            
+	            if ($e instanceof RecursionException) {
+	                $message = self::CYCLIC_DATA_ERROR;
+	            } else {
+	                $message = $e->getMessage();
+	            }
+	            
+	            $response->setReasonPhrase(
+                    $message
+	            );
+	            
+	            $response->setStatusCode(
+                    self::STATUS_UNKNOWN_EXCEPTION
+	            );
+	            
+	            $response->setContent(JsonEncoder::encode([
+                    'd' => null,
+                    'e' => [
+	                   'm' => $message,
+	                   'c' => $e->getCode()
+	               ]
+	            ], true));
+	        }
+	        
 	        return $response;
 	    }
 	}
@@ -364,6 +395,18 @@ class ServiceController extends AbstractActionController
 	{
 	    $response = new ConsoleResponse();
 	    
+	    try {
+	        if (is_array($data) || is_object($data)) {
+	            $json = JsonEncoder::encode($data, true);
+	            $data = Json::prettyPrint($json) . "\n";
+	        } else if (is_scalar($data)) {
+	            $data = (string)$data."\n";
+	        }
+	    } catch (Exception $e) {
+	        $exception = $e;
+	        $data = null;
+        }
+	    
 	    if ($exception) {
 	        
 	        if ($verbose) {
@@ -377,13 +420,6 @@ class ServiceController extends AbstractActionController
 	        }
 	        
 	        $response->setErrorLevel($exception->getCode());
-	    }
-	    
-	    if (is_array($data) || is_object($data)) {
-	        $json = JsonEncoder::encode($data, true);
-	        $data = Json::prettyPrint($json) . "\n";
-	    } else if (is_scalar($data)) {
-	        $data = (string)$data."\n";
 	    }
 	    
 	    if (!$silent) {

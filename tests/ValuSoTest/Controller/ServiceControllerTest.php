@@ -14,6 +14,7 @@ use Zend\Http\Response;
 use Zend\Mvc\Controller\PluginManager;
 use Zend\Mvc\MvcEvent;
 use Zend\Mvc\Router\RouteMatch;
+use ValuSoTest\TestAsset\RecursionTest;
 
 class ServiceControllerTest extends TestCase
 {
@@ -47,6 +48,14 @@ class ServiceControllerTest extends TestCase
                     break;
                 case 'paramTestResponse':
                     return $command->getParam('test');
+                    break;
+                case 'recursionTestResponse':
+                    $objA = new RecursionTest();
+                    $objB = new RecursionTest();
+                    $objB->parent = $objA;
+                    $objA->parent = $objB;
+                    
+                    return $objA;
                     break;
                 default:
                     throw new OperationNotFoundException('Unsupported operation');
@@ -185,6 +194,15 @@ class ServiceControllerTest extends TestCase
         $this->assertEquals(
                 400,
                 $this->event->getResponse()->getStatusCode());
+    }
+    
+    public function testCyclicJsonResponseError()
+    {
+        $this->setUpRouteMatch('recursion-test-response');
+        
+        $this->assertEquals(
+            500,
+            $this->event->getResponse()->getStatusCode());
     }
     
     private function setUpExceptionTest($errorMode)
