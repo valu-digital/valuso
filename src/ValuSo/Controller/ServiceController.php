@@ -331,13 +331,14 @@ class ServiceController extends AbstractActionController
 	    
 	    if ($data instanceof \Zend\Http\Response) {
 	        
-	        // Attach custom stream response sender listener
+    	    // Attach custom stream response sender listener
 	        // to send the stream to output buffer in chunks
 	        if ($data instanceof Stream) {
-    	        $this->getEventManager()->attach(
-                    SendResponseEvent::EVENT_SEND_RESPONSE, 
-                    new StreamResponseSender(),
-                    10000);
+	            $sendReponseListener = $this->getServiceLocator()->get('SendResponseListener');
+	            $sendReponseListener->getEventManager()->attach(
+	                    SendResponseEvent::EVENT_SEND_RESPONSE,
+	                    new StreamResponseSender(),
+	                    10000);
 	        }
 	        
 	        return $data;
