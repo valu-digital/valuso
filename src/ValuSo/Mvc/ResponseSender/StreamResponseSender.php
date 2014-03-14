@@ -21,7 +21,7 @@ class StreamResponseSender extends AbstractResponseSender
         $response = $event->getResponse();
         $stream   = $response->getStream();
         
-        while (($buff = fread($stream, 4096)) != false) {
+        while (($buff = fread($stream, 4096)) !== false) {
             echo $buff;
         }
         
