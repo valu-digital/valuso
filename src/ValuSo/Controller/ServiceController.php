@@ -8,6 +8,7 @@ use ValuSo\Exception\NotFoundException;
 use ValuSo\Exception\PermissionDeniedException;
 use ValuSo\Exception\ServiceException;
 use ValuSo\Json\Encoder as JsonEncoder;
+use ValuSo\Mvc\ResponseSender\StreamResponseSender;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\Json\Json;
 use Zend\Json\Decoder as JsonDecoder;
@@ -17,6 +18,8 @@ use Zend\Console\Request as ConsoleRequest;
 use Zend\Console\Response as ConsoleResponse;
 use Exception;
 use Zend\Json\Exception\RecursionException;
+use Zend\Http\Response\Stream;
+use Zend\Mvc\ResponseSender\SendResponseEvent;
 
 /**
  * Service controller
@@ -287,7 +290,8 @@ class ServiceController extends AbstractActionController
 	 * @param \Exception|null $exception
 	 * @return Response
 	 */
-	protected function prepareHttpResponse($data, $status, $exception = null){
+	protected function prepareHttpResponse($data, $status, $exception = null)
+	{
 	    
 	    $error = $this->getRequest()->getHeader(
 	            self::HEADER_ERRORS, 
@@ -326,6 +330,16 @@ class ServiceController extends AbstractActionController
 	    }
 	    
 	    if ($data instanceof \Zend\Http\Response) {
+	        
+	        // Attach custom stream response sender listener
+	        // to send the stream to output buffer in chunks
+	        if ($data instanceof Stream) {
+    	        $this->getEventManager()->attach(
+                    SendResponseEvent::EVENT_SEND_RESPONSE, 
+                    new StreamResponseSender(),
+                    10000);
+	        }
+	        
 	        return $data;
 	    } else {
 	        
