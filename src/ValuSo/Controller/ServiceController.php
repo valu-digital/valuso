@@ -149,6 +149,13 @@ class ServiceController extends AbstractActionController
     const HEADER_ERRORS_DEFAULT = 'default';
     
     /**
+     * Header that indicates that the response's content type should be
+     * forced to text/html
+     * @var string
+     */
+    const HEADER_FORCE_CONTENT_HTML = 'X-VALU-CONTENT-TYPE-HTML';
+    
+    /**
      * Error message for cyclic references
      * @var string
      */
@@ -200,6 +207,16 @@ class ServiceController extends AbstractActionController
             }
             
             if ($status === self::STATUS_SUCCESS) {
+                if (isset($params[self::HEADER_FORCE_CONTENT_HTML])) {
+                    
+                    if ($params[self::HEADER_FORCE_CONTENT_HTML]) {
+                        $this->getRequest()->getHeaders()->addHeaders([
+                                self::HEADER_FORCE_CONTENT_HTML => true
+                                ]);
+                    }
+                    unset($params[self::HEADER_FORCE_CONTENT_HTML]);
+                }
+                
                 $data = $this->exec(
                         $service,
                         $operation,
@@ -297,18 +314,28 @@ class ServiceController extends AbstractActionController
 	            self::HEADER_ERRORS, 
 	            self::HEADER_ERRORS_DEFAULT);
 	    
+	    $forceHtmlContentType = $this->getRequest()->getHeader(
+	            self::HEADER_FORCE_CONTENT_HTML,
+	            false);
+	    
 	    if ($error instanceof HeaderInterface) {
 	        $error = $error->getFieldValue();
 	    }
 	    
 	    $response = $this->getResponse();
 	    
-	    $response->getHeaders()->addHeaders(array(
+	    $headers = array(
 	    	'Cache-Control' => 'no-cache, must-revalidate',
 	        'Pragma' 		=> 'no-cache',
 	    	'Expires' 		=> '2000-01-01 00:00:00',
             'Content-Type'  => 'application/json',
-	    ));
+	    );
+	    
+	    if ($forceHtmlContentType) {
+	        $headers['Content-Type'] = 'text/html';
+	    }
+
+	    $response->getHeaders()->addHeaders($headers);
 	    
 	    // update response status code
 	    $response->setStatusCode(
