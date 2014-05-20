@@ -213,7 +213,9 @@ class ServiceController extends AbstractActionController
             $status = self::STATUS_NOT_FOUND;
         } catch (ServiceException $exception) {
             $status = self::STATUS_UNKNOWN_EXCEPTION;
-        } catch (\Exception $exception) {}
+        } catch (\Exception $exception) {
+            $status = self::STATUS_UNKNOWN_EXCEPTION;
+        }
 	    
         // Log error
 	    if ($exception) {
