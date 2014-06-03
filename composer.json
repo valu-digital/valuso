@@ -1,5 +1,5 @@
 {
-	"name" : "valu/valuso",
+	"name" : "valu/valu-so",
 	"description" : "Zend Framework 2 module for service oriented application architecture",
 	"version" : "1.0.1",
 	"type" : "library",
@@ -21,10 +21,14 @@
 	},
 	"autoload" : {
 		"psr-0" : {
-			"ValuSo\\" : "src/",
-			"ValuSoTest\\" : "tests/"
+			"ValuSo\\" : "src/"
 		}
 	},
+	"autoload-dev" : {
+        "psr-0" : {
+            "ValuSoTest\\" : "tests/"
+        }
+    },
 	"suggests" : {
 		"phpdocumentor/reflection-docblock" : "2.0.*@dev"
 	}
