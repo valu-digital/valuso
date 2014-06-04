@@ -107,7 +107,7 @@ class ServiceProxyGenerator
         $source = "<?php\n" . $class->generate();
         
         $fileName        = $this->getProxyFileName($className);
-        $parentDirectory = dirname($fileName);
+        $parentDirectory = $this->proxyDirectory;
         
         if ( ! is_dir($parentDirectory) && (false === @mkdir($parentDirectory, 0775, true))) {
             throw Exception\RuntimeException('Proxy directory '.$parentDirectory.' not found');
