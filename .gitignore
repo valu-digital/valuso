@@ -3,3 +3,7 @@
 .settings/
 .DS_Store
 composer.lock
+tests/data/
+data/
+vendor/
+build/logs/
