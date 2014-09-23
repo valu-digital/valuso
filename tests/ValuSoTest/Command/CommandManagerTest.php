@@ -1,8 +1,6 @@
 <?php
 namespace ValuSoTest\Command;
 
-use ValuSo\Broker\ServiceLoader;
-
 use ValuSo\Command\Command;
 use ValuSo\Exception\SkippableException;
 use ValuSoTest\TestAsset\ClosureService;

@@ -4,7 +4,6 @@ namespace ValuSo\Broker;
 use ValuSo\Command\CommandInterface;
 use Zend\EventManager\ResponseCollection;
 use Zend\EventManager\Event;
-use \ArrayObject;
 
 /**
  * This class encapsulates service command information and event
@@ -105,7 +104,7 @@ class ServiceEvent
 	/**
 	 * Retrieve responses
 	 * 
-     * @return \Zend\EventManager\ResponseCollection
+     * @return ResponseCollection
      */
     public function getResponses()
     {

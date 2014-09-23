@@ -2,7 +2,6 @@
 namespace ValuSoTest\TestAsset;
 
 use ValuSo\Annotation;
-use ValuSo\Feature\ProxyAwareInterface;
 
 /**
  * @Annotation\Version("0.9")

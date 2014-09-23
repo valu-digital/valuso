@@ -2,13 +2,10 @@
 namespace ValuSoTest\Broker;
 
 use ValuSo\Command\Command;
-
-use ValuSo\Command\CommandManager;
 use ValuSoTest\TestAsset\ClosureService;
 use Zend\Mvc\Service\ServiceManagerConfig;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Cache\StorageFactory;
-use Zend\EventManager\ResponseCollection;
 use PHPUnit_Framework_TestCase;
 use ValuSo\Broker\ServiceLoader;
 

@@ -2,7 +2,6 @@
 namespace ValuSoTest\Annotation;
 
 use ValuSo\Annotation\Exclude;
-use ValuSoTest\TestAsset\TestService;
 
 /**
  * Alias test case.

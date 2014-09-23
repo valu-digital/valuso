@@ -10,15 +10,10 @@
 
 namespace ValuSo\Broker;
 
-use ValuSo\Proxy\ServiceProxyGenerator;
 use Zend\Cache\Storage\StorageInterface;
 use Zend\Cache\StorageFactory;
-use Zend\EventManager\EventManagerAwareInterface;
-use Zend\EventManager\EventManagerInterface;
 use Zend\ServiceManager\ConfigInterface;
-use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceManager;
-use Zend\ServiceManager\ServiceManagerAwareInterface;
 
 /**
  * @category   Zend

@@ -62,7 +62,7 @@ class ServicePluginManager extends AbstractPluginManager
     /**
      * Annotation builder
      * 
-     * @var \ValuSo\Annotation\AnnotationBuilder
+     * @var AnnotationBuilder
      */
     protected $annotationBuilder;
     
@@ -266,7 +266,7 @@ class ServicePluginManager extends AbstractPluginManager
     }
 
     /**
-     * @return \ValuSo\Annotation\AnnotationBuilder
+     * @return AnnotationBuilder
      */
     public function getAnnotationBuilder()
     {
@@ -279,7 +279,7 @@ class ServicePluginManager extends AbstractPluginManager
     }
 
 	/**
-     * @param \ValuSo\Annotation\AnnotationBuilder $annotationBuilder
+     * @param AnnotationBuilder $annotationBuilder
      */
     public function setAnnotationBuilder($annotationBuilder)
     {

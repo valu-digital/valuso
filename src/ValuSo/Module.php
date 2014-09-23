@@ -2,7 +2,6 @@
 namespace ValuSo;
 
 use Zend\ModuleManager\Feature;
-use Zend\EventManager\EventInterface;
 use Zend\Loader\AutoloaderFactory;
 use Zend\Loader\StandardAutoloader;
 use Zend\Console\Adapter\AdapterInterface as Console;

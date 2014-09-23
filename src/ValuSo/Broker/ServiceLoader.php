@@ -6,12 +6,7 @@ use Traversable;
 use	ValuSo\Exception;
 use	ValuSo\Feature;
 use ValuSo\Command\CommandManager;
-use Zend\Cache\StorageFactory;
-use Zend\Cache\Storage\StorageInterface;
-use	Zend\Loader\PluginClassLoader;
-use Zend\EventManager\EventManagerInterface;
 use	Zend\ServiceManager\ServiceLocatorInterface;
-use	Zend\ServiceManager\ServiceLocatorAwareInterface;
 use	Zend\ServiceManager\ServiceManager;
 use Zend\ServiceManager\ConfigInterface as ServiceManagerConfig;
 

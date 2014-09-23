@@ -2,7 +2,6 @@
 namespace ValuSo\Controller\Plugin;
 
 use Zend\Mvc\Controller\Plugin\AbstractPlugin;
-use Zend\Stdlib\Dispatchable;
 use ValuSo\Broker\ServiceBroker;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;

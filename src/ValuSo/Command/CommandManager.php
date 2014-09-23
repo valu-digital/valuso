@@ -5,7 +5,6 @@ use ValuSo\Exception;
 use ValuSo\Broker\ServiceLoader;
 use Zend\EventManager\ResponseCollection;
 use Zend\Stdlib\PriorityQueue;
-use \ArrayObject;
 
 /**
  * Command manager

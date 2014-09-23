@@ -2,11 +2,7 @@
 namespace ValuSo\Feature;
 
 use ValuSo\Stdlib\Options;
-
-use Zend\Config\Config;
-
 use ArrayObject;
-use ValuSo\Annotation as ValuService;
 
 trait OptionsTrait
 {

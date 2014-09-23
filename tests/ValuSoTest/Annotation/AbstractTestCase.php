@@ -2,11 +2,8 @@
 namespace ValuSoTest\Annotation;
 
 use Zend\EventManager\EventManager;
-
 use Zend\Stdlib\ArrayUtils;
-
 use ValuSo\Broker\ServiceBroker;
-use ValuSo\Command\Command;
 use ValuSo\Annotation\AnnotationBuilder;
 use ValuSo\Proxy\ServiceProxyGenerator;
 use PHPUnit_Framework_TestCase;

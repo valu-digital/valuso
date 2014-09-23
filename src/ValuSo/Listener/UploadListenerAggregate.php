@@ -2,8 +2,6 @@
 namespace ValuSo\Listener;
 
 use ValuSo\Broker\ServiceEvent;
-use ValuSo\Broker\ServiceBroker;
-use ValuSo\Command\CommandInterface;
 use ValuSo\Exception;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\ListenerAggregateInterface;

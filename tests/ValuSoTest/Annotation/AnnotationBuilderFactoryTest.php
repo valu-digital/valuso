@@ -2,8 +2,6 @@
 namespace ValuSoTest\Broker;
 
 use ValuSoTest\TestAsset\Annotation\AnnotationListener;
-
-use Zend\EventManager\EventManager;
 use Zend\ServiceManager\ServiceManager;
 use ValuSo\Annotation\AnnotationBuilderFactory;
 use PHPUnit_Framework_TestCase;
