@@ -1,15 +1,13 @@
 <?php
 namespace ValuSo\Proxy;
 
-use ValuSo\Command\CommandInterface;
-use ValuSo\Exception;
 use Zend\Code\Generator\PropertyGenerator;
 use Zend\Code\Generator\ParameterGenerator;
 use Zend\Code\Generator\MethodGenerator;
 use Zend\Code\Generator\ClassGenerator;
-use Zend\Code\Reflection\MethodReflection;
-use \ReflectionClass;
-use \ReflectionMethod;
+use ReflectionClass;
+use ReflectionMethod;
+use ValuSo\Exception;
 
 class ServiceProxyGenerator
 {
@@ -70,7 +68,7 @@ class ServiceProxyGenerator
     public function generateProxyClass($entity, $config)
     {
         if (!is_array($config) && !$config instanceof \ArrayAccess) {
-            throw new \InvalidArgumentException(
+            throw new Exception\InvalidArgumentException(
                 'Invalid proxy class configuration; array or instance of ArrayAccess expected');
         }
         
@@ -110,11 +108,11 @@ class ServiceProxyGenerator
         $parentDirectory = $this->proxyDirectory;
         
         if ( ! is_dir($parentDirectory) && (false === @mkdir($parentDirectory, 0775, true))) {
-            throw Exception\RuntimeException('Proxy directory '.$parentDirectory.' not found');
+            throw new Exception\RuntimeException('Proxy directory '.$parentDirectory.' not found');
         }
         
         if ( ! is_writable($parentDirectory)) {
-            throw Exception\RuntimeException('Proxy directory '.$parentDirectory.' is not writable');
+            throw new Exception\RuntimeException('Proxy directory '.$parentDirectory.' is not writable');
         }
         
         $tmpFileName = $fileName . '.' . uniqid('', true);
@@ -171,7 +169,7 @@ class ServiceProxyGenerator
         if (file_exists($file)) {
             require_once $file;
         } else {
-            throw new \RuntimeException(
+            throw new Exception\RuntimeException(
                 sprintf('Proxy class for service "%s" has not been initialized', get_class($service)));
         }
         
