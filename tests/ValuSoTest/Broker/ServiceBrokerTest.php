@@ -5,6 +5,8 @@ use ValuSo\Broker\ServiceEvent;
 use ValuSo\Broker\ServiceBroker;
 use ValuSo\Command\Command;
 use ValuSoTest\TestAsset\ClosureService;
+use SlmQueueTest\Asset\SimpleQueue;
+use SlmQueue\Job\JobPluginManager;
 use PHPUnit_Framework_TestCase;
 use ValuSo\Broker\ServiceLoader;
 
@@ -23,6 +25,11 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
      * @var ServiceBroker
      */
     private $serviceBroker;
+    
+    /**
+     * @var JobPluginManager
+     */
+    private $jobPluginManager;
 
     /**
      * Prepares the environment before running a test.
@@ -30,6 +37,10 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
     protected function setUp()
     {
         parent::setUp();
+        
+        $this->jobPluginManager = new JobPluginManager();
+        $this->jobPluginManager->setInvokableClass('ValuSo\Broker\QueuedJob', 'ValuSo\Broker\QueuedJob');
+        
         $this->serviceBroker = new ServiceBroker();
     }
 
@@ -150,13 +161,31 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(
             'yes', $responses->last());
     }
+    
+    /**
+     * @expectedException ValuSo\Broker\Exception\ConfigurationException
+     */
+    public function testQueueWhenQueueNotAvailable()
+    {
+        $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
+        $broker = new ServiceBroker();
+        $broker->queue($command);
+    }
 
     public function testQueue()
     {
-        // TODO Auto-generated ServiceBrokerTest->testQueue()
-        $this->markTestIncomplete("queue test not implemented");
+        $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
+        $command->setIdentity(new \ArrayObject(['username' => 'valu']));
         
-        $this->serviceBroker->queue(/* parameters */);
+        $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
+        
+        $this->serviceBroker->setQueue($queue);
+        $job1 = $this->serviceBroker->queue($command);
+        $job2 = $queue->pop();
+        
+        $this->assertInstanceOf('ValuSo\Broker\QueuedJob', $job1);
+        $this->assertInstanceOf('ValuSo\Broker\QueuedJob', $job2);
+        $this->assertEquals($job1->getId(), $job2->getId());
     }
 
     public function testGetQueue()

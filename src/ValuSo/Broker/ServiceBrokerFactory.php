@@ -5,11 +5,8 @@ use ValuSo\Util\EventManagerConfigurator;
 use ValuSo\Broker\ServiceBroker;
 use ValuSo\Broker\ServiceLoader;
 use Zend\Cache\Storage\StorageInterface;
-use Zend\Mvc\Service\ServiceManagerConfig;
-use Zend\EventManager\ListenerAggregateInterface;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
-use Zend\Cache\StorageFactory;
 
 /**
  * ServiceBroker factory
@@ -131,6 +128,13 @@ class ServiceBrokerFactory implements FactoryInterface
         
         $broker = new ServiceBroker();
         $broker->setLoader($loader);
+        
+        // Attach queue instance
+        if ($serviceLocator->has('SlmQueue\Queue\QueuePluginManager')) {
+            $queueManager = $serviceLocator->get('SlmQueue\Queue\QueuePluginManager');
+            $queue        = $queueManager->get('valu_so');
+            $broker->setQueue($queue);
+        }
         
         // Attach configured event listeners
         if (!empty($config['listeners'])) {

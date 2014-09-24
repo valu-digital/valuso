@@ -14,5 +14,8 @@ if (!file_exists($autoloadScript)) {
     throw new RuntimeException('vendor/autoload.php could not be found. Did you run `php composer.phar install`?');
 }
 
+$vendorDir = dirname($autoloadScript);
+
 $loader = include_once $autoloadScript;
 $loader->add('ValuSoTest', __DIR__);
+$loader->add('SlmQueueTest', $vendorDir . '/slm/queue/tests');

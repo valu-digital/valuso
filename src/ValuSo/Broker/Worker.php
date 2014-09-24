@@ -62,6 +62,20 @@ class Worker{
 	 */
 	protected $priority = null;
 	
+	/**
+	 * Queue delay
+	 *
+	 * @var int|null
+	 */
+	protected $delay = null;
+	
+	/**
+	 * Queue max execution time
+	 *
+	 * @var int|null
+	 */
+	protected $ttr = null;
+	
 	public function __construct(ServiceBroker $broker, $service)
 	{
 		$this->broker 	= $broker;
@@ -141,12 +155,16 @@ class Worker{
 	/**
 	 * Set operation to be queued
 	 *
-	 * @param boolean $queued
+	 * @param int $priority
+	 * @param int|null $delay
+	 * @param int|null $ttr
 	 * @return Worker
 	 */
-	public function queue($priority = 1)
+	public function queue($priority = 1024, $delay = null, $ttr = null)
 	{
 	    $this->priority = $priority;
+	    $this->delay = $delay;
+	    $this->ttr = $ttr;
 	}
 	
 	/**
@@ -175,7 +193,14 @@ class Worker{
 		}
 		
 		if ($this->priority !== null) {
-		    return $this->broker->queue($command, $this->callback);
+		    
+		    $options = [
+		        'priority' => $this->priority,
+		        'delay' => $this->delay,
+		        'ttr' => $this->ttr
+		    ];
+		    
+		    return $this->broker->queue($command, $this->callback, $options);
 		} else {
 		    return $this->broker->dispatch($command, $this->callback);
 		}

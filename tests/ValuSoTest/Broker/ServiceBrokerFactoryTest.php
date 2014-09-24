@@ -8,6 +8,7 @@ use ValuSoTest\TestAsset\ClosureService;
 use Zend\ServiceManager\ServiceManager;
 use ValuSo\Broker\ServiceBrokerFactory;
 use PHPUnit_Framework_TestCase;
+use SlmQueue\Queue\QueuePluginManager;
 
 /**
  * ServiceBroker test case.
@@ -86,6 +87,18 @@ class ServiceBrokerFactoryTest extends PHPUnit_Framework_TestCase
         $service = $this->serviceBrokerFactory->createService($sm);
     
         $this->assertEquals('executed', $service->execute('Test.Service', 'run')->first());
+    }
+    
+    public function testCreateServiceBrokerWithJobQueue()
+    {
+        $sm = $this->configureServiceManager();
+        
+        $queuePluginManager = new QueuePluginManager();
+        $sm->setService('SlmQueue\Queue\QueuePluginManager', $queuePluginManager);
+        $queuePluginManager->setFactory('valu_so', 'SlmQueueTest\Asset\SimpleQueueFactory');
+        
+        $service = $this->serviceBrokerFactory->createService($sm);
+        $this->assertInstanceOf('SlmQueueTest\Asset\SimpleQueue', $service->getQueue());
     }
     
     private function configureServiceManager($services = array())

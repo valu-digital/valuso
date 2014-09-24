@@ -3,7 +3,6 @@ namespace ValuSo\Broker;
 
 use Zend\EventManager\EventManagerAwareInterface;
 use ValuSo\Command\Command;
-use ValuSo\Command\CommandManager;
 use ValuSo\Command\CommandInterface;
 use ValuSo\Broker\ServiceServiceLoader;
 use ValuSo\Feature;
@@ -14,6 +13,8 @@ use Zend\EventManager\EventManager;
 use ArrayObject;
 use Traversable;
 use ArrayAccess;
+use SlmQueue\Queue\QueueInterface;
+use ValuSo\Broker\Exception\ConfigurationException;
 
 /**
  * 
@@ -25,7 +26,7 @@ class ServiceBroker{
 	/**
 	 * Service loader
 	 * 
-	 * @var \ValuSo\Broker\ServiceServiceLoader
+	 * @var ServiceServiceLoader
 	 */
 	private $loader;
 	
@@ -49,6 +50,13 @@ class ServiceBroker{
 	 * @var \ArrayAccess
 	 */
 	private $defaultIdentity;
+	
+	/**
+	 * Job queue
+	 * 
+	 * @var QueueInterface
+	 */
+	private $queue;
 	
 	/**
 	 * Initialize and configure service broker
@@ -284,22 +292,53 @@ class ServiceBroker{
 	 * Queue execution of service operation
 	 *
 	 * @param int $priority
-	 * @param string $service
-	 * @param string $operation
-	 * @param array $args
+	 * @param CommandInterface   $command
 	 * @param mixed $callback    Valid PHP callback (must be serializable)
+	 * @param array $options
+	 * @return QueuedJob
 	 */
-	public function queue(CommandInterface $command, $callback = null, $priority = null){
-	    return $this->getQueue()->add($command, $callback, $priority);
+	public function queue(CommandInterface $command, $callback = null, array $options = []){
+	    
+	    $queue = $this->getQueue();
+	    
+	    if (!$queue) {
+	        throw new ConfigurationException('JobQueue is not set');
+	    }
+	    
+	    if ($command->getIdentity()) {
+	        $identity = $command->getIdentity();
+	    } else if ($this->getDefaultIdentity()) {
+	        $identity = $this->getDefaultIdentity();
+	    } else {
+	        $identity = null;
+	    }
+	    
+	    if (method_exists($identity, 'toArray')) {
+	        $identity = $identity->toArray();
+	    }
+	    
+	    $job = new QueuedJob($command, $identity, $callback);
+	    $queue->push($job, $options);
+	    return $job;
 	}
 	
 	/**
-	 * Retrieve service queue
+	 * Set job queue
 	 * 
-	 * @return ServiceQueue
+	 * @param QueueInterface $queue
+	 */
+	public function setQueue(QueueInterface $queue)
+	{
+	    $this->queue = $queue;
+	}
+	
+	/**
+	 * Retrieve job queue
+	 * 
+	 * @return QueueInterface
 	 */
 	public function getQueue(){
-	    throw new \Exception('Not implemented');
+	    return $this->queue;
 	}
 	
 	/**

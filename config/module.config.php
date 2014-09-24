@@ -71,6 +71,18 @@ return [
             ]
         ]
     ],
+    'slm_queue' => [
+        'queue_manager' => [
+            'factories' => [
+                'valu_so' => 'SlmQueueBeanstalkd\Factory\BeanstalkdQueueFactory'
+            ],
+            'job_manager' => [
+                'invokables' => [
+                    'ValuSo\Broker\QueuedJob' => 'ValuSo\Broker\QueuedJob',
+                ],
+            ],
+        ],
+    ],
     'valu_so' => [
         'proxy_dir' => 'data/valuso/proxy',
         'use_main_locator' => true,
