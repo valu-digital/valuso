@@ -293,11 +293,10 @@ class ServiceBroker{
 	 *
 	 * @param int $priority
 	 * @param CommandInterface   $command
-	 * @param mixed $callback    Valid PHP callback (must be serializable)
 	 * @param array $options
 	 * @return QueuedJob
 	 */
-	public function queue(CommandInterface $command, $callback = null, array $options = []){
+	public function queue(CommandInterface $command, array $options = []){
 	    
 	    $queue = $this->getQueue();
 	    
@@ -315,9 +314,12 @@ class ServiceBroker{
 	    
 	    if (method_exists($identity, 'toArray')) {
 	        $identity = $identity->toArray();
+	    } else if ($identity instanceof \ArrayObject) {
+	        $identity = $identity->getArrayCopy();
 	    }
 	    
-	    $job = new QueuedJob($command, $identity, $callback);
+	    $job = new QueuedJob();
+	    $job->setup($command, $identity);
 	    $queue->push($job, $options);
 	    return $job;
 	}

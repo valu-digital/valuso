@@ -181,19 +181,44 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
         
         $this->serviceBroker->setQueue($queue);
         $job1 = $this->serviceBroker->queue($command);
+        
+        $content = $job1->getContent();
+        $this->assertEquals([
+            'context'   => Command::CONTEXT_CLI,
+            'service'   => 'Valu.Test',
+            'operation' => 'run',
+            'params'    => ['all' => true],
+            'identity'  => ['username' => 'valu']
+        ], $content);
+        
         $job2 = $queue->pop();
         
         $this->assertInstanceOf('ValuSo\Broker\QueuedJob', $job1);
         $this->assertInstanceOf('ValuSo\Broker\QueuedJob', $job2);
-        $this->assertEquals($job1->getId(), $job2->getId());
+        $this->assertEquals($job1->getContent(), $job2->getContent());
+    }
+    
+    public function testQueueUsesDefaultIdentityIfCommandDoesNotHaveIdentity()
+    {
+        $identity = new \ArrayObject(['id' => 'abc', 'username' => 'valu']);
+        $this->serviceBroker->setDefaultIdentity($identity);
+        
+        $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
+        $this->serviceBroker->setQueue($queue);
+        
+        $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
+        $job = $this->serviceBroker->queue($command);
+        
+        $content = $job->getContent();
+        $this->assertEquals($identity->getArrayCopy(), $content['identity']);
     }
 
-    public function testGetQueue()
+    public function testSetGetQueue()
     {
-        // TODO Auto-generated ServiceBrokerTest->testGetQueue()
-        $this->markTestIncomplete("getQueue test not implemented");
+        $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
         
-        $this->serviceBroker->getQueue(/* parameters */);
+        $this->serviceBroker->setQueue($queue);
+        $this->assertSame($queue, $this->serviceBroker->getQueue());
     }
     
     public function testSetOptions()

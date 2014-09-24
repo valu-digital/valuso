@@ -20,14 +20,11 @@ class QueuedJobTest extends TestCase
             'params' => [],
             'context' => Command::CONTEXT_NATIVE,
             'identity' => ['id' => 'abc'],
-            'callback' => null
         ];
     
     private $serviceBroker;
     
     public $testOperationInvoked = false;
-    
-    public $testCallbackInvoked = false;
     
     public $identityUsed;
     
@@ -64,10 +61,6 @@ class QueuedJobTest extends TestCase
             }
         });
         
-        $this->testContent['callback'] = function() use($self) {
-            $self->testCallbackInvoked = true;
-        };
-        
         $this->testCommand = $command = new Command(
             $this->testContent['service'], 
             $this->testContent['operation'], 
@@ -75,7 +68,7 @@ class QueuedJobTest extends TestCase
             $this->testContent['context']);
         
         $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($command, $this->testContent['identity'], $this->testContent['callback']);
+        $this->queuedJob->setup($command, $this->testContent['identity']);
         $this->queuedJob->setServiceBroker($broker);
     }
     
@@ -94,12 +87,6 @@ class QueuedJobTest extends TestCase
         $this->assertTrue($this->testOperationInvoked);
     }
     
-    public function testExecuteInvokesCorrectCallback()
-    {
-        $this->queuedJob->execute();
-        $this->assertTrue($this->testCallbackInvoked);
-    }
-    
     public function testExecuteRefreshesIdentity()
     {
         $identity = new \ArrayObject([
@@ -107,7 +94,7 @@ class QueuedJobTest extends TestCase
         ]);
         
         $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($this->testCommand, $identity, $this->testContent['callback']);
+        $this->queuedJob->setup($this->testCommand, $identity);
         $this->queuedJob->setServiceBroker($this->serviceBroker);
         $this->queuedJob->execute();
         
@@ -124,7 +111,7 @@ class QueuedJobTest extends TestCase
         ]);
         
         $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($this->testCommand, $identity, $this->testContent['callback']);
+        $this->queuedJob->setup($this->testCommand, $identity);
         $this->queuedJob->setServiceBroker($this->serviceBroker);
         $this->queuedJob->execute();
         
@@ -143,11 +130,6 @@ class QueuedJobTest extends TestCase
         $this->assertEquals($this->testContent['identity'], $command->getIdentity()->getArrayCopy());
     }
 
-    public function testGetCallback()
-    {
-        $this->assertInternalType('object', $this->queuedJob->getCallback());
-    }
-   
     public function testSetGetServiceBroker()
     {
         $broker = new ServiceBroker();

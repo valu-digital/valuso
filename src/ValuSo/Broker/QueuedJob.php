@@ -20,16 +20,9 @@ class QueuedJob
      */
     private $command;
     
-    /**
-     * Callback
-     * 
-     * @var mixed
-     */
-    private $callback;
-    
     private $loaded = false;
     
-    public function setup(CommandInterface $command, $identity, $callback = null)
+    public function setup(CommandInterface $command, $identity)
     {
         if (!$identity) {
             throw new RuntimeException(
@@ -38,12 +31,11 @@ class QueuedJob
         
         $this->generateId($command, $identity);
         
-        parent::setContent([
+        $this->setContent([
             'context'      => $command->getContext(),
             'service'      => $command->getName(),
             'operation'    => $command->getOperation(),
-            'params'       => $command->getParams(),
-            'callback'     => $callback,
+            'params'       => $command->getParams()->getArrayCopy(),
             'identity'     => $identity
         ]);
     }
@@ -51,7 +43,6 @@ class QueuedJob
 	public function execute()
     {
         $command    = $this->getCommand();
-        $callback   = $this->getCallback();
         $broker     = $this->getServiceBroker();
         
         if (!$command->getIdentity()) {
@@ -59,9 +50,7 @@ class QueuedJob
                 'Unable to execute Job: identity is not valid');
         }
         
-        $broker->dispatch(
-            $command,
-            $callback);
+        $broker->dispatch($command);
     }
     
     public function getCommand()
@@ -71,15 +60,6 @@ class QueuedJob
         }
         
         return $this->command;
-    }
-    
-    public function getCallback()
-    {
-        if (!$this->loaded) {
-            $this->load();
-        }
-        
-        return $this->callback;
     }
 
     public function setServiceBroker(ServiceBroker $serviceBroker)
@@ -136,7 +116,6 @@ class QueuedJob
         }
         
         $this->command = $command;
-        $this->callback = isset($payload['callback']) ? $payload['callback'] : null;
         
         return true;
     }
