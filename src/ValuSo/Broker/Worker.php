@@ -4,6 +4,7 @@ namespace ValuSo\Broker;
 use ArrayAccess;
 use ValuSo\Command\Command;
 use ValuSo\Broker\ServiceBroker;
+use ValuSo\Queue\Job\ServiceJob;
 
 /**
  * Worker separates certain Unit Of Work from others
@@ -54,27 +55,6 @@ class Worker{
 	 * @var \ArrayAccess
 	 */
 	protected $identity = null;
-	
-	/**
-	 * Queue priority
-	 * 
-	 * @var int|null
-	 */
-	protected $priority = null;
-	
-	/**
-	 * Queue delay
-	 *
-	 * @var int|null
-	 */
-	protected $delay = null;
-	
-	/**
-	 * Queue max execution time
-	 *
-	 * @var int|null
-	 */
-	protected $ttr = null;
 	
 	public function __construct(ServiceBroker $broker, $service)
 	{
@@ -151,59 +131,34 @@ class Worker{
 		$this->args = $args;
 		return $this;
 	}
-	
-	/**
-	 * Set operation to be queued
-	 *
-	 * @param int $priority
-	 * @param int|null $delay
-	 * @param int|null $ttr
-	 * @return Worker
-	 */
-	public function queue($priority = 1024, $delay = null, $ttr = null)
-	{
-	    $this->priority = $priority;
-	    $this->delay = $delay;
-	    $this->ttr = $ttr;
-	}
-	
+
 	/**
 	 * Execute operation
-	 * 
+	 *
 	 * @param string $operation   Operation
 	 * @param array|null $args    Arguments to use as command parameters
-	 * 
+	 *
 	 * @return \Zend\EventManager\ResponseCollection
 	 */
 	public function exec($operation, $args = null)
 	{
-		$args = ($args) ?:$this->args;
-		$command = new Command($this->service, $operation, $args);
-		
-		if ($this->context) {
-		    $command->setContext($this->context);
-		} else {
-		    $command->setContext($this->broker->getDefaultContext());
-		}
-		
-		if ($this->identity) {
-		    $command->setIdentity($this->identity);
-		} else {
-		    $command->setIdentity($this->broker->getDefaultIdentity());
-		}
-		
-		if ($this->priority !== null) {
-		    
-		    $options = [
-		        'priority' => $this->priority,
-		        'delay' => $this->delay,
-		        'ttr' => $this->ttr
-		    ];
-		    
-		    return $this->broker->queue($command, $this->callback, $options);
-		} else {
-		    return $this->broker->dispatch($command, $this->callback);
-		}
+	    $command = $this->_prepareCommand($operation, $args);
+	    return $this->broker->dispatch($command, $this->callback);
+	}
+	
+	/**
+	 * Queue operation
+	 * 
+	 * @param string $operation   Operation
+	 * @param array|null $args    Arguments to use as command parameters
+	 * @param array $options      Queue options
+	 * 
+	 * @return ServiceJob
+	 */
+	public function queue($operation, $args = null, $options = [])
+	{
+		$command = $this->_prepareCommand($operation, $args);
+		return $this->broker->queue($command, $options);
 	}
 	
 	/**
@@ -231,5 +186,32 @@ class Worker{
 	public function _break()
 	{
 	    return true;
+	}
+	
+	/**
+	 * Prepare command for operation
+	 * 
+	 * @param string $operation
+	 * @param array|null $args
+	 * @return \ValuSo\Command\Command
+	 */
+	protected function _prepareCommand($operation, $args)
+	{
+	    $args = ($args) ?:$this->args;
+	    $command = new Command($this->service, $operation, $args);
+	    
+	    if ($this->context) {
+	        $command->setContext($this->context);
+	    } else {
+	        $command->setContext($this->broker->getDefaultContext());
+	    }
+	    
+	    if ($this->identity) {
+	        $command->setIdentity($this->identity);
+	    } else {
+	        $command->setIdentity($this->broker->getDefaultIdentity());
+	    }
+	    
+	    return $command;
 	}
 }
