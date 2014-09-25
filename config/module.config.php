@@ -76,11 +76,6 @@ return [
             'factories' => [
                 'valu_so' => 'SlmQueueBeanstalkd\Factory\BeanstalkdQueueFactory'
             ],
-            'job_manager' => [
-                'invokables' => [
-                    'ValuSo\Broker\QueuedJob' => 'ValuSo\Broker\QueuedJob',
-                ],
-            ],
         ],
     ],
     'valu_so' => [
