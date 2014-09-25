@@ -39,7 +39,7 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
         parent::setUp();
         
         $this->jobPluginManager = new JobPluginManager();
-        $this->jobPluginManager->setInvokableClass('ValuSo\Broker\QueuedJob', 'ValuSo\Broker\QueuedJob');
+        $this->jobPluginManager->setInvokableClass('ValuSo\Broker\Job\ServiceJob', 'ValuSo\Broker\Job\ServiceJob');
         
         $this->serviceBroker = new ServiceBroker();
     }
@@ -193,8 +193,8 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
         
         $job2 = $queue->pop();
         
-        $this->assertInstanceOf('ValuSo\Broker\QueuedJob', $job1);
-        $this->assertInstanceOf('ValuSo\Broker\QueuedJob', $job2);
+        $this->assertInstanceOf('ValuSo\Queue\Job\ServiceJob', $job1);
+        $this->assertInstanceOf('ValuSo\Queue\Job\ServiceJob', $job2);
         $this->assertEquals($job1->getContent(), $job2->getContent());
     }
     
