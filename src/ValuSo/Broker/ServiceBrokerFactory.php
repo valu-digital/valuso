@@ -133,6 +133,7 @@ class ServiceBrokerFactory implements FactoryInterface
         if ($serviceLocator->has('SlmQueue\Queue\QueuePluginManager')) {
             $queueManager = $serviceLocator->get('SlmQueue\Queue\QueuePluginManager');
             $queue        = $queueManager->get('valu_so');
+            
             $queue->getJobPluginManager()->setFactory(
                 'ValuSo\Queue\Job\ServiceJob', 
                 'ValuSo\Queue\Job\ServiceJobFactory');
