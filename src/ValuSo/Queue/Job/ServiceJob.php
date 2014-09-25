@@ -1,13 +1,14 @@
 <?php
-namespace ValuSo\Broker;
+namespace ValuSo\Queue\Job;
 
 use SlmQueue\Job\AbstractJob;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use RuntimeException;
 use ValuSo\Command\CommandInterface;
 use ValuSo\Command\Command;
+use ValuSo\Broker\ServiceBroker;
 
-class QueuedJob 
+class ServiceJob 
     extends AbstractJob
     implements ServiceLocatorAwareInterface
 {
@@ -28,8 +29,6 @@ class QueuedJob
             throw new RuntimeException(
                 'Unable to initialize Job: identity is not available');
         }
-        
-        $this->generateId($command, $identity);
         
         $this->setContent([
             'context'      => $command->getContext(),
@@ -149,17 +148,5 @@ class QueuedJob
         return $this->getServiceBroker()
             ->service('Identity')
             ->setIdentity($identitySeed);
-    }
-    
-    private final function generateId(CommandInterface $command, $identity)
-    {
-        $id = md5(
-            $identity['username'] .'|'.
-            $command->getService() .'|'.
-            $command->getOperation() .'|'.
-            microtime(true).'|'.
-            rand(0, 100000));
-        
-        $this->setId($id);
     }
 }

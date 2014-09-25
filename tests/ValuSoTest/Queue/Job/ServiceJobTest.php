@@ -2,25 +2,25 @@
 namespace ValuSoTest\Broker;
 
 use PHPUnit_Framework_TestCase as TestCase;
-use ValuSo\Broker\QueuedJob;
+use ValuSo\Queue\Job\ServiceJob;
 use ValuSo\Broker\ServiceBroker;
 use Zend\ServiceManager\ServiceManager;
 use ValuSo\Command\Command;
 
-class QueuedJobTest extends TestCase
+class ServiceJobTest extends TestCase
 {
     
-    private $queuedJob;
+    private $serviceJob;
     
     private $testCommand;
     
     private $testContent = [
-            'service' => 'test', 
-            'operation' => 'test',
-            'params' => [],
-            'context' => Command::CONTEXT_NATIVE,
-            'identity' => ['id' => 'abc'],
-        ];
+        'service'   => 'test', 
+        'operation' => 'test',
+        'params'    => [],
+        'context'   => Command::CONTEXT_NATIVE,
+        'identity'  => ['id' => 'abc'],
+    ];
     
     private $serviceBroker;
     
@@ -67,9 +67,9 @@ class QueuedJobTest extends TestCase
             $this->testContent['params'], 
             $this->testContent['context']);
         
-        $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($command, $this->testContent['identity']);
-        $this->queuedJob->setServiceBroker($broker);
+        $this->serviceJob = new ServiceJob();
+        $this->serviceJob->setup($command, $this->testContent['identity']);
+        $this->serviceJob->setServiceBroker($broker);
     }
     
     /**
@@ -77,13 +77,13 @@ class QueuedJobTest extends TestCase
      */
     public function testSetupFailsWithoutIdentity()
     {
-        $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($this->testCommand, null, null);
+        $this->serviceJob = new ServiceJob();
+        $this->serviceJob->setup($this->testCommand, null, null);
     }
     
     public function testExecuteInvokesCorrectOperation()
     {
-        $this->queuedJob->execute();
+        $this->serviceJob->execute();
         $this->assertTrue($this->testOperationInvoked);
     }
     
@@ -93,10 +93,10 @@ class QueuedJobTest extends TestCase
             'username' => 'testuser'
         ]);
         
-        $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($this->testCommand, $identity);
-        $this->queuedJob->setServiceBroker($this->serviceBroker);
-        $this->queuedJob->execute();
+        $this->serviceJob = new ServiceJob();
+        $this->serviceJob->setup($this->testCommand, $identity);
+        $this->serviceJob->setServiceBroker($this->serviceBroker);
+        $this->serviceJob->execute();
         
         $this->assertEquals($this->resolvedIdentity, $this->identityUsed->getArrayCopy());
     }
@@ -110,17 +110,17 @@ class QueuedJobTest extends TestCase
             'username' => 'notexistinguser'
         ]);
         
-        $this->queuedJob = new QueuedJob();
-        $this->queuedJob->setup($this->testCommand, $identity);
-        $this->queuedJob->setServiceBroker($this->serviceBroker);
-        $this->queuedJob->execute();
+        $this->serviceJob = new ServiceJob();
+        $this->serviceJob->setup($this->testCommand, $identity);
+        $this->serviceJob->setServiceBroker($this->serviceBroker);
+        $this->serviceJob->execute();
         
         $this->assertEquals($this->resolvedIdentity, $this->identityUsed->getArrayCopy());
     }
     
     public function testGetCommand()
     {
-        $command = $this->queuedJob->getCommand();
+        $command = $this->serviceJob->getCommand();
         
         $this->assertInstanceOf('ValuSo\Command\Command', $command);
         $this->assertEquals($this->testContent['service'], $command->getService());
@@ -133,8 +133,8 @@ class QueuedJobTest extends TestCase
     public function testSetGetServiceBroker()
     {
         $broker = new ServiceBroker();
-        $this->queuedJob->setServiceBroker($broker);
-        $this->assertSame($broker, $this->queuedJob->getServiceBroker());
+        $this->serviceJob->setServiceBroker($broker);
+        $this->assertSame($broker, $this->serviceJob->getServiceBroker());
     }
     
     public function testServiceBrokerFetchedViaServiceLocator()
@@ -143,17 +143,17 @@ class QueuedJobTest extends TestCase
         $sm = new ServiceManager();
         $sm->setService('ServiceBroker', $broker);
         
-        $queuedJob = new QueuedJob();
-        $queuedJob->setup($this->testCommand, $this->testContent['identity']);
-        $queuedJob->setServiceLocator($sm);
-        $this->assertSame($broker, $queuedJob->getServiceBroker());
+        $ServiceJob = new ServiceJob();
+        $ServiceJob->setup($this->testCommand, $this->testContent['identity']);
+        $ServiceJob->setServiceLocator($sm);
+        $this->assertSame($broker, $ServiceJob->getServiceBroker());
     }
     
     public function testSetGetServiceLocator()
     {
         $sm = new ServiceManager();
-        $this->queuedJob->setServiceLocator($sm);
-        $this->assertSame($sm, $this->queuedJob->getServiceLocator());
+        $this->serviceJob->setServiceLocator($sm);
+        $this->assertSame($sm, $this->serviceJob->getServiceLocator());
     }
     
     /**
@@ -161,8 +161,8 @@ class QueuedJobTest extends TestCase
      */
     public function testExecuteFailsIfBrokerNotPresent()
     {
-        $queuedJob = new QueuedJob();
-        $queuedJob->setup($this->testCommand, $this->testContent['identity']);
-        $queuedJob->execute();
+        $ServiceJob = new ServiceJob();
+        $ServiceJob->setup($this->testCommand, $this->testContent['identity']);
+        $ServiceJob->execute();
     }
 }

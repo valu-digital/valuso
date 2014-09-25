@@ -7,6 +7,7 @@ use ValuSo\Command\CommandInterface;
 use ValuSo\Broker\ServiceServiceLoader;
 use ValuSo\Feature;
 use	ValuSo\Exception\ServiceNotFoundException;
+use	ValuSo\Queue\Job\ServiceJob;
 use	Zend\EventManager\EventManagerInterface;
 use	Zend\EventManager\ResponseCollection;
 use Zend\EventManager\EventManager;
@@ -294,7 +295,7 @@ class ServiceBroker{
 	 * @param int $priority
 	 * @param CommandInterface   $command
 	 * @param array $options
-	 * @return QueuedJob
+	 * @return ServiceJob
 	 */
 	public function queue(CommandInterface $command, array $options = []){
 	    
@@ -318,8 +319,10 @@ class ServiceBroker{
 	        $identity = $identity->getArrayCopy();
 	    }
 	    
-	    $job = new QueuedJob();
+	    $job = new ServiceJob();
 	    $job->setup($command, $identity);
+	    $job->setServiceBroker($this);
+	    
 	    $queue->push($job, $options);
 	    return $job;
 	}
