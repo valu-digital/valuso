@@ -5,6 +5,7 @@ use Zend\EventManager\ResponseCollection;
 use Zend\EventManager\Event;
 use ArrayObject;
 use ArrayAccess;
+use ValuSo\Queue\Job\ServiceJob;
 
 /**
  * This class encapsulates service command information and event
@@ -71,6 +72,13 @@ class Command
      * @var \ArrayAccess
      */
     protected $identity;
+    
+    /**
+     * Service job (if associated with any)
+     * 
+     * @var ServiceJob
+     */
+    protected $job;
     
     /**
      * Initialize a new command
@@ -219,5 +227,25 @@ class Command
     public function getIdentity()
     {
         return $this->identity;
+    }
+    
+    /**
+     * Retrieve associated job (if any)
+     * 
+     * @return ServiceJob
+     */
+	public function getJob()
+    {
+        return $this->job;
+    }
+
+    /**
+     * Set associated service job
+     * 
+     * @param ServiceJob $job
+     */
+	public function setJob(ServiceJob $job)
+    {
+        $this->job = $job;
     }
 }
