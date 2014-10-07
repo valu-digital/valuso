@@ -19,13 +19,6 @@ class ServiceJob
     private $serviceBroker;
     
     /**
-     * @var CommandInterface
-     */
-    private $command;
-    
-    private $loaded = false;
-    
-    /**
      * Setup ServiceJob
      * 
      * @param CommandInterface $command
@@ -73,11 +66,30 @@ class ServiceJob
      */
     public function getCommand()
     {
-        if (!$this->loaded) {
-            $this->load();
+        $payload = $this->getContent();
+        
+        $command = new Command(
+            $payload['service'], 
+            $payload['operation'], 
+            $payload['params'], 
+            $payload['context']);
+        
+        $payloadIdentity = $payload['identity'];
+        $identity = null;
+        
+        if (isset($payloadIdentity['username'])) {
+            $identity = $this->resolveIdentity($payloadIdentity['username']);
+        } else if($payloadIdentity) {
+            $identity = $this->prepareIdentity($payloadIdentity);
         }
         
-        return $this->command;
+        if ($identity) {
+            $command->setIdentity($identity);
+        }
+        
+        $command->setJob($this);
+        
+        return $command;
     }
 
     /**
@@ -128,45 +140,6 @@ class ServiceJob
     public function setServiceLocator(ServiceLocatorInterface $serviceLocator)
     {
         $this->serviceLocator = $serviceLocator;
-    }
-    
-    /**
-     * Load command and identity details from job payload
-     * 
-     * When job is serialized, command and identity parameters
-     * are stored in an array. This method reads the contents
-     * of the array to re-populate command and identity, so
-     * that the command may be executed. 
-     * 
-     * @return boolean
-     */
-    protected function load()
-    {
-        $this->loaded = true;
-        $payload = $this->getContent();
-        
-        $command = new Command(
-            $payload['service'], 
-            $payload['operation'], 
-            $payload['params'], 
-            $payload['context']);
-        
-        $payloadIdentity = $payload['identity'];
-        $identity = null;
-        
-        if (isset($payloadIdentity['username'])) {
-            $identity = $this->resolveIdentity($payloadIdentity['username']);
-        } else if($payloadIdentity) {
-            $identity = $this->prepareIdentity($payloadIdentity);
-        }
-        
-        if ($identity) {
-            $command->setIdentity($identity);
-        }
-        
-        $this->command = $command;
-        
-        return true;
     }
     
     /**
