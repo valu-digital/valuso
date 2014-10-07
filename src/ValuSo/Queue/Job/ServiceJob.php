@@ -3,10 +3,12 @@ namespace ValuSo\Queue\Job;
 
 use SlmQueue\Job\AbstractJob;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
-use RuntimeException;
+use Zend\ServiceManager\ServiceLocatorInterface;
 use ValuSo\Command\CommandInterface;
 use ValuSo\Command\Command;
 use ValuSo\Broker\ServiceBroker;
+use RuntimeException;
+use ArrayAccess;
 
 class ServiceJob 
     extends AbstractJob
@@ -23,6 +25,13 @@ class ServiceJob
     
     private $loaded = false;
     
+    /**
+     * Setup ServiceJob
+     * 
+     * @param CommandInterface $command
+     * @param ArrayAccess $identity
+     * @throws RuntimeException
+     */
     public function setup(CommandInterface $command, $identity)
     {
         if (!$identity) {
@@ -39,6 +48,11 @@ class ServiceJob
         ]);
     }
     
+    /**
+     * Execute job
+     * 
+     * @throws RuntimeException
+     */
 	public function execute()
     {
         $command    = $this->getCommand();
@@ -46,12 +60,17 @@ class ServiceJob
         
         if (!$command->getIdentity()) {
             throw new RuntimeException(
-                'Unable to execute Job: identity is not valid');
+                'Unable to execute Job: identity is not available');
         }
         
         $broker->dispatch($command);
     }
     
+    /**
+     * Retrieve command
+     * 
+     * @return CommandInterface
+     */
     public function getCommand()
     {
         if (!$this->loaded) {
@@ -61,11 +80,22 @@ class ServiceJob
         return $this->command;
     }
 
+    /**
+     * Set service broker instance
+     * 
+     * @param ServiceBroker $serviceBroker
+     */
     public function setServiceBroker(ServiceBroker $serviceBroker)
     {
         $this->serviceBroker = $serviceBroker;
     }
     
+    /**
+     * Retrieve service broker instance
+     * 
+     * @throws RuntimeException
+     * @return ServiceBroker
+     */
     public function getServiceBroker()
     {
         if (!$this->serviceBroker && $this->serviceLocator) {
@@ -80,16 +110,36 @@ class ServiceJob
         return $this->serviceBroker;
     }
 
+    /**
+     * Retrieve service locator instance
+     * 
+     * @return ServiceLocatorInterface
+     */
     public function getServiceLocator()
     {
         return $this->serviceLocator;
     }
     
-    public function setServiceLocator(\Zend\ServiceManager\ServiceLocatorInterface $serviceLocator)
+    /**
+     * Set service locator instance
+     * 
+     * @param ServiceLocatorInterface $serviceLocator
+     */
+    public function setServiceLocator(ServiceLocatorInterface $serviceLocator)
     {
         $this->serviceLocator = $serviceLocator;
     }
     
+    /**
+     * Load command and identity details from job payload
+     * 
+     * When job is serialized, command and identity parameters
+     * are stored in an array. This method reads the contents
+     * of the array to re-populate command and identity, so
+     * that the command may be executed. 
+     * 
+     * @return boolean
+     */
     protected function load()
     {
         $this->loaded = true;
