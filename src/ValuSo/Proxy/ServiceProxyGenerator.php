@@ -8,6 +8,7 @@ use Zend\Code\Generator\ClassGenerator;
 use ReflectionClass;
 use ReflectionMethod;
 use ValuSo\Exception;
+use Zend\Stdlib\ArrayStack;
 
 class ServiceProxyGenerator
 {
@@ -98,7 +99,7 @@ class ServiceProxyGenerator
             'properties' => [
                 new PropertyGenerator('__wrappedObject', null, PropertyGenerator::FLAG_PUBLIC),
                 new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE),
-                new PropertyGenerator('__commandStack', array(), PropertyGenerator::FLAG_PRIVATE)
+                new PropertyGenerator('__commandStack', new ArrayStack([]), PropertyGenerator::FLAG_PRIVATE)
             ]
         ]);
         
@@ -228,6 +229,9 @@ class ServiceProxyGenerator
             MethodGenerator::FLAG_PUBLIC,
             'if ($wrappedObject instanceof \ValuSo\Feature\ProxyAwareInterface) {' . "\n" .
             '    $wrappedObject->setServiceProxy($this);' . "\n" .
+            '}' . "\n" .
+            'if ($wrappedObject instanceof \ValuSo\Feature\CommandStackAwareInterface) {' . "\n" .
+            '    $wrappedObject->setCommandStack($this->__commandStack);' . "\n" .
             '}' . "\n" .
             '$this->__wrappedObject = $wrappedObject;' . "\n"
         );
@@ -618,7 +622,7 @@ class ServiceProxyGenerator
                     $code .= '// Trigger "'.$type.'" event' . "\n";
                     $code .= 'if (sizeof($this->__commandStack)) {' . "\n";
                     $code .= '    $__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
-                    $code .= '    $__event->setCommand($this->__commandStack[sizeof($this->__commandStack)-1]);' . "\n";
+                    $code .= '    $__event->setCommand($this->__commandStack->getIterator()->current());' . "\n";
                     
                     $code .= '    $this->getEventManager()->trigger($__event);' . "\n";
                     $code .= '}' . "\n";
