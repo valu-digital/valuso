@@ -1,9 +1,9 @@
 <?php
 namespace ValuSo\Json;
 
-use Zend\Json\Json;
 use Zend\Json\Encoder as BaseEncoder;
 use Zend\Json\Exception\RecursionException;
+use ValuSo\Json\Exception\ObjectEncodingException;
 
 class Encoder extends BaseEncoder
 {
@@ -34,7 +34,17 @@ class Encoder extends BaseEncoder
             $array = $value->toArray();
             return $this->_encodeArray($array);
         } else {
-            return Json::encode($value, true);
+            $json = json_encode(
+                $value,
+                JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+            );
+            
+            if ($json === false) {
+                throw new ObjectEncodingException(
+                    sprintf('Error encoding object of type %s', get_class($value)));
+            } else {
+                return $json;
+            }
         }
     }
 }
