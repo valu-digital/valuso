@@ -47,6 +47,6 @@ trait CommandTrait
      */
     public function getCommand()
     {
-        return $this->getCommandStack()->getIterator()->current();
+        return $this->getCommandStack()->getIterator()->top();
     }
 }

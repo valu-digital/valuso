@@ -622,7 +622,7 @@ class ServiceProxyGenerator
                     $code .= '// Trigger "'.$type.'" event' . "\n";
                     $code .= 'if ($this->__commandStack->count()) {' . "\n";
                     $code .= '    $__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
-                    $code .= '    $__event->setCommand($this->__commandStack->current());' . "\n";
+                    $code .= '    $__event->setCommand($this->__commandStack->top());' . "\n";
                     
                     $code .= '    $this->getEventManager()->trigger($__event);' . "\n";
                     $code .= '}' . "\n";
