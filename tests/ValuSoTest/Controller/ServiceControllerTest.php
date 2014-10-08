@@ -49,8 +49,8 @@ class ServiceControllerTest extends TestCase
                 case 'recursionTestResponse':
                     $objA = new RecursionTest();
                     $objB = new RecursionTest();
+                    $objA->child = $objB;
                     $objB->parent = $objA;
-                    $objA->parent = $objB;
                     
                     return $objA;
                     break;
