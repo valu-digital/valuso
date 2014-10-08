@@ -8,7 +8,6 @@ use Zend\Code\Generator\ClassGenerator;
 use ReflectionClass;
 use ReflectionMethod;
 use ValuSo\Exception;
-use Zend\Stdlib\ArrayStack;
 
 class ServiceProxyGenerator
 {
@@ -99,7 +98,7 @@ class ServiceProxyGenerator
             'properties' => [
                 new PropertyGenerator('__wrappedObject', null, PropertyGenerator::FLAG_PUBLIC),
                 new PropertyGenerator('__eventManager', null, PropertyGenerator::FLAG_PRIVATE),
-                new PropertyGenerator('__commandStack', new ArrayStack([]), PropertyGenerator::FLAG_PRIVATE)
+                new PropertyGenerator('__commandStack', null, PropertyGenerator::FLAG_PRIVATE)
             ]
         ]);
         
@@ -227,6 +226,7 @@ class ServiceProxyGenerator
             '__construct',
             [new ParameterGenerator('wrappedObject')],
             MethodGenerator::FLAG_PUBLIC,
+            '$this->__commandStack = new \Zend\Stdlib\ArrayStack();' . "\n" .
             'if ($wrappedObject instanceof \ValuSo\Feature\ProxyAwareInterface) {' . "\n" .
             '    $wrappedObject->setServiceProxy($this);' . "\n" .
             '}' . "\n" .

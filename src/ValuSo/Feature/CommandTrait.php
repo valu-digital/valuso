@@ -30,6 +30,10 @@ trait CommandTrait
      */
     public function getCommandStack()
     {
+        if (!$this->commandStack) {
+            $this->commandStack = new ArrayStack();
+        }
+        
         return $this->commandStack;
     }
     
@@ -43,6 +47,6 @@ trait CommandTrait
      */
     public function getCommand()
     {
-        return $this->commandStack->getIterator()->current();
+        return $this->getCommandStack()->getIterator()->current();
     }
 }
