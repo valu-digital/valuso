@@ -1,14 +1,14 @@
 <?php
 namespace ValuSo\Feature;
 
-use Zend\Stdlib\ArrayStack;
+use SplStack;
 
 interface CommandStackAwareInterface
 {
     /**
      * Set command stack
      * 
-     * @param CommandInterface $command
+     * @param SplStack $stack
      */
-    public function setCommandStack(ArrayStack $stack);
+    public function setCommandStack(SplStack $stack);
 }

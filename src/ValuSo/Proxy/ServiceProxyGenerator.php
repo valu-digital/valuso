@@ -226,7 +226,7 @@ class ServiceProxyGenerator
             '__construct',
             [new ParameterGenerator('wrappedObject')],
             MethodGenerator::FLAG_PUBLIC,
-            '$this->__commandStack = new \Zend\Stdlib\ArrayStack();' . "\n" .
+            '$this->__commandStack = new \SplStack();' . "\n" .
             'if ($wrappedObject instanceof \ValuSo\Feature\ProxyAwareInterface) {' . "\n" .
             '    $wrappedObject->setServiceProxy($this);' . "\n" .
             '}' . "\n" .
@@ -286,7 +286,7 @@ class ServiceProxyGenerator
         '}' . "\n\n";
         
         // Store command to a private stack
-        $invokeImpl .= '$this->__commandStack[] = $command;' . "\n\n";
+        $invokeImpl .= '$this->__commandStack->push($command);' . "\n\n";
         
         // Define injector for identity
         $invokeImpl .=
@@ -323,13 +323,13 @@ class ServiceProxyGenerator
                 $invokeImpl .= '        $result = $this->' . $methodName . '(' . implode(', ', $specs['params']) . ");\n";
             }
         
-            $invokeImpl .=    '        array_pop($this->__commandStack);' . "\n"
+            $invokeImpl .=    '        $this->__commandStack->pop();' . "\n"
                             . '        return $result;' . "\n"
                             . '        break;' . "\n";
         }
         
         $invokeImpl .= '    default:' . "\n"
-                    .  '        array_pop($this->__commandStack);' . "\n"
+                    .  '        $this->__commandStack->pop();' . "\n"
                     .  '    break;' . "\n";
         
         $invokeImpl .= "}\n"; // end switch
@@ -620,9 +620,9 @@ class ServiceProxyGenerator
                     }
                     
                     $code .= '// Trigger "'.$type.'" event' . "\n";
-                    $code .= 'if (sizeof($this->__commandStack)) {' . "\n";
+                    $code .= 'if ($this->__commandStack->count()) {' . "\n";
                     $code .= '    $__event = new \ValuSo\Broker\ServiceEvent('.var_export($specs['name'], true).', $this->__wrappedObject, $__event_params);' . "\n";
-                    $code .= '    $__event->setCommand($this->__commandStack->getIterator()->current());' . "\n";
+                    $code .= '    $__event->setCommand($this->__commandStack->current());' . "\n";
                     
                     $code .= '    $this->getEventManager()->trigger($__event);' . "\n";
                     $code .= '}' . "\n";

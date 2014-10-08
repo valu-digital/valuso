@@ -2,14 +2,14 @@
 namespace ValuSo\Feature;
 
 use ValuSo\Command\CommandInterface;
-use Zend\Stdlib\ArrayStack;
+use SplStack;
 
 trait CommandTrait
 {
     /**
      * Command stack
      * 
-     * @var ArrayStack
+     * @var SplStack
      */
     protected $commandStack;
     
@@ -18,7 +18,7 @@ trait CommandTrait
      * 
      * @param CommandInterface $command
      */
-    public function setCommandStack(ArrayStack $stack)
+    public function setCommandStack(SplStack $stack)
     {
         $this->commandStack = $stack;
     }
@@ -31,7 +31,7 @@ trait CommandTrait
     public function getCommandStack()
     {
         if (!$this->commandStack) {
-            $this->commandStack = new ArrayStack();
+            $this->commandStack = new SplStack();
         }
         
         return $this->commandStack;
