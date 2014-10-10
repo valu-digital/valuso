@@ -101,11 +101,32 @@ class ServiceBrokerFactoryTest extends PHPUnit_Framework_TestCase
         $this->assertInstanceOf('SlmQueueTest\Asset\SimpleQueue', $service->getQueue());
     }
     
-    private function configureServiceManager($services = array())
+    public function testJobQueueNameIsConfigurable()
     {
+        $sm = $this->configureServiceManager([], ['name' => 'custom']);
+        
+        $queuePluginManager = new QueuePluginManager();
+        $sm->setService('SlmQueue\Queue\QueuePluginManager', $queuePluginManager);
+        
+        $jpm = new \SlmQueue\Job\JobPluginManager();
+        
+        $queue = new \SlmQueueTest\Asset\SimpleQueue('custom', $jpm);
+        $queuePluginManager->setService('custom', $queue);
+        
+        $service = $this->serviceBrokerFactory->createService($sm);
+        $this->assertSame($queue, $service->getQueue());
+    }
+    
+    private function configureServiceManager($services = array(), $queue = null)
+    {
+        if (is_null($queue)) {
+            $queue = ['name' => 'valu_so'];
+        }
+        
         $sm = new ServiceManager();
         $sm->setService('Config', [
             'valu_so' => [
+                'queue' => $queue,
                 'services' => $services
             ]
         ]);

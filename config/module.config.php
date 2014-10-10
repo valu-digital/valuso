@@ -79,6 +79,9 @@ return [
         ],
     ],
     'valu_so' => [
+        'queue' => [
+            'name' => 'valu_so'
+        ],
         'proxy_dir' => 'data/valuso/proxy',
         'use_main_locator' => true,
         'cache' => [
