@@ -168,8 +168,12 @@ class ServiceJob
      */
     protected function prepareIdentity($identitySeed)
     {
-        return $this->getServiceBroker()
+        $this->getServiceBroker()
             ->service('Identity')
             ->setIdentity($identitySeed);
+        
+        return $this->getServiceBroker()
+            ->service('Identity')
+            ->getIdentity();
     }
 }
