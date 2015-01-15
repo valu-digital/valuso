@@ -172,8 +172,13 @@ class ServiceJob
             ->service('Identity')
             ->setIdentity($identitySeed);
         
-        return $this->getServiceBroker()
+        $identity = $this->getServiceBroker()
             ->service('Identity')
             ->getIdentity();
+        
+        $this->getServiceBroker()
+             ->setDefaultIdentity($identity);
+        
+        return $identity;
     }
 }
