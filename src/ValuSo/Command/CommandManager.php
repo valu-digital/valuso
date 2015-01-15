@@ -76,7 +76,7 @@ class CommandManager
             $this->services[$service] = new PriorityQueue();
         }
         
-        if (!is_callable($callback)) {
+        if (is_string($callback)) {
             $id = $callback;
             $callback = null;
         } else {
