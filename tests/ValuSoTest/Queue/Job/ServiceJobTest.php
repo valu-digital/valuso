@@ -53,11 +53,12 @@ class ServiceJobTest extends TestCase
             return false;
         });
         
-        $broker->getLoader()->registerService('identity', 'identity', function(Command $command) {
+        $storedIdentity = new \ArrayObject();
+        $broker->getLoader()->registerService('identity', 'identity', function(Command $command) use(&$storedIdentity) {
             if ($command->getOperation() === 'setIdentity') {
-                return new \ArrayObject($command->getParam(0));
+                $storedIdentity = new \ArrayObject($command->getParam(0));
             } else if ($command->getOperation() === 'getIdentity') {
-                return new \ArrayObject();
+                return $storedIdentity;
             }
         });
         
