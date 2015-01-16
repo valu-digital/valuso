@@ -59,6 +59,15 @@ class SlmQueueIntegrationTest extends TestCase
         $this->sm = self::$application->getServiceManager();
         $this->serviceBroker = $this->sm->get('ServiceBroker');
         
+        
+        try {
+            $pheanstalk = $this->sm->get('SlmQueueBeanstalkd\Service\PheanstalkService');
+            $pheanstalk->listTubes();
+        } catch (\Pheanstalk_Exception_ConnectionException $e) {
+            $this->markTestSkipped('Pheanstalk service is not available');
+            return;
+        }
+        
         $this->clearQueue();
         
         $this->identity = $identity = new \ArrayObject([
@@ -117,6 +126,7 @@ class SlmQueueIntegrationTest extends TestCase
             }
         }
         catch(\Pheanstalk_Exception_ServerException $e){}
+        catch (\Pheanstalk_Exception_ConnectionException $e){}
     }
     
     public function testQueue()
