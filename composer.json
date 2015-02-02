@@ -1,7 +1,6 @@
 {
 	"name" : "valu/valuso",
 	"description" : "Zend Framework 2 module for service oriented application architecture",
-	"version" : "1.0.1",
 	"type" : "library",
 	"keywords" : [
 		"valu",
