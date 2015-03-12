@@ -18,13 +18,6 @@ class SetupService extends AbstractSetupService
     public function setup(array $options = array())
     {
         $this->clearCache();
-        try {
-            $this->buildProxyClasses();
-        } catch (\Exception $e) {
-            // Ignore exception, proxy classes may not yet be ready for initialization
-            // if this is the first install.    
-        }
-        
         return true;
     }
     
