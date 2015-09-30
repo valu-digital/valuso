@@ -202,10 +202,16 @@ class ServiceProxyGenerator
         $methods = array();
         $methods[] = $this->generateConstructor($reflectionClass);
         $methods[] = $this->generateInvoker($reflectionClass);
-        $methods[] = $this->generateEventManagerSetter($reflectionClass);
-        $methods[] = $this->generateEventManagerGetter($reflectionClass);
         $methods[] = $this->generateOperationNotFound($reflectionClass);
         $methods[] = $this->generateMatchContext($reflectionClass);
+        
+        if (!$reflectionClass->hasMethod('setEventManager')) {
+            $methods[] = $this->generateEventManagerSetter($reflectionClass);
+        }
+        
+        if (!$reflectionClass->hasMethod('getEventManager')) {
+            $methods[] = $this->generateEventManagerGetter($reflectionClass);
+        }
         
         $methods = array_merge(
             $methods,
