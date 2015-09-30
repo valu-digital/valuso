@@ -18,7 +18,6 @@ class SetupService extends AbstractSetupService
     public function setup(array $options = array())
     {
         $this->clearCache();
-        $this->buildProxyClasses();
         return true;
     }
     
