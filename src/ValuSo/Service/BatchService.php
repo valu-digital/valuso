@@ -83,7 +83,7 @@ class BatchService
         $options = is_array($options) ? $options : array();
         
         $options = array_merge(
-            array(),
+            array('verbose' => false),
             $options
         );
         
@@ -122,6 +122,8 @@ class BatchService
         }
         
         $responses = array();
+        $errors = array();
+        
         foreach ($workers as $key => $worker) {
             try{
                 $responses[$key] = $worker
@@ -130,10 +132,23 @@ class BatchService
                 
             } catch(\Exception $e) {
                 $responses[$key] = false;
+                
+                if ($e instanceof Exception\ServiceException) {
+                    $errors[$key] = ['m' => $e->getRawMessage(), 'c' => $e->getCode(), 'a' => $e->getVars()];
+                } else {
+                    $errors[$key] = ['m' => 'Unknown error', 'c' => $e->getCode()];
+                }
             }
         }
         
-        return $responses;
+        if ($options['verbose']) {
+            return [
+        	   'results' => $responses,
+        	   'errors' => $errors
+            ];
+        } else {
+            return $responses;
+        }
     }
     
     /**
