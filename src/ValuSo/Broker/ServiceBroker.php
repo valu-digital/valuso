@@ -376,7 +376,11 @@ class ServiceBroker{
 
         // Notify, that a (background) job is about to start
         if ($command->getJob()) {
-            $this->trigger($this->createEvent('job.start', $command));
+            $jobEvent = $this->createEvent(
+                'job.start', $command);
+
+            $this->getEventManager()
+                ->trigger($jobEvent);
         }
 
 		// Prepare and trigger init.<service>.<operation> event
