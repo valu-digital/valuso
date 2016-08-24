@@ -18,68 +18,68 @@ use SlmQueue\Queue\QueueInterface;
 use ValuSo\Broker\Exception\ConfigurationException;
 
 /**
- * 
+ *
  * @author juhasuni
  *
  */
 class ServiceBroker{
-    
+
 	/**
 	 * Service loader
-	 * 
+	 *
 	 * @var ServiceServiceLoader
 	 */
 	private $loader;
-	
+
 	/**
 	 * Event manager
 	 *
 	 * @var EventManagerInterface
 	 */
 	private $eventManager;
-	
+
 	/**
 	 * Default service context
-	 * 
+	 *
 	 * @var string
 	 */
 	private $defaultContext;
-	
+
 	/**
 	 * Default identity
-	 * 
+	 *
 	 * @var \ArrayAccess
 	 */
 	private $defaultIdentity;
-	
+
 	/**
 	 * Job queue
-	 * 
+	 *
 	 * @var QueueInterface
 	 */
 	private $queue;
-	
+
 	/**
 	 * Initialize and configure service broker
-	 * 
+	 *
 	 * @param array|Traversable $options {@see setOptions()}
 	 */
 	public function __construct($options = null){
-	    
+
 	    $this->setDefaultContext(Command::CONTEXT_NATIVE);
-		
+
 		if(null !== $options){
 		    $this->setOptions($options);
 		}
 	}
-	
+
 	/**
 	 * Configure service broker
-	 * 
+	 *
 	 * Use this method to configure service broker.
 	 * Currently supports only option 'loader' which
 	 * calls {@see setLoader()}.
-	 * 
+	 *
 	 * @param array|Traversable $options
 	 * @throws \InvalidArgumentException
 	 * @return \ValuSo\Broker\ServiceBroker
@@ -92,19 +92,19 @@ class ServiceBroker{
                 (is_object($options) ? get_class($options) : gettype($options))
 	        ));
 	    }
-	
+
 	    foreach ($options as $key => $value){
-	        	
+
 	        $key = strtolower($key);
-	        	
+
 	        if($key == 'loader'){
 	            $this->setLoader($value);
 	        }
 	    }
-	
+
 	    return $this;
 	}
-	
+
 	/**
 	 * Retrieve default service context
 	 *
@@ -113,53 +113,53 @@ class ServiceBroker{
 	public function getDefaultContext(){
 	    return $this->defaultContext;
 	}
-	
+
 	/**
 	 * Set default service context
-	 * 
+	 *
 	 * @param string $context
 	 */
 	public function setDefaultContext($context){
 	    $this->defaultContext = $context;
 	    return $this;
 	}
-	
+
 	/**
 	 * Retrieve default identity
-	 * 
+	 *
 	 * @return \ArrayAccess|null
 	 */
 	public function getDefaultIdentity()
 	{
 	    if (!$this->defaultIdentity) {
 	        $this->defaultIdentity = new ArrayObject(array());
-	        
+
 	        if ($this->exists('Identity')) {
 	            $responses = $this->execute(
                     'Identity',
                     'getIdentity',
                     array(),
                     function($response){if($response instanceof ArrayAccess) return true;});
-	             
+
 	            if (sizeof($responses)) {
 	                $this->defaultIdentity = $responses->last();
 	            }
-	            
+
 	            if ($this->defaultIdentity instanceof \ArrayObject) {
 	                $this->defaultIdentity->setFlags(\ArrayObject::ARRAY_AS_PROPS);
 	            } elseif(!$this->defaultIdentity) {
 	                return new \ArrayObject([]);
 	            }
 	        }
-	        
+
 	    }
-	    
+
 	    return $this->defaultIdentity;
 	}
-	
+
 	/**
 	 * Set default identity
-	 * 
+	 *
 	 * @param ArrayAccess $identity
 	 */
 	public function setDefaultIdentity(ArrayAccess $identity)
@@ -167,39 +167,39 @@ class ServiceBroker{
 	    $this->defaultIdentity = $identity;
 	    return $this;
 	}
-	
+
 	/**
 	 * Set service loader instance
-	 * 
+	 *
 	 * @param ServiceLoader $loader
 	 */
 	public function setLoader(ServiceLoader $loader){
-	    
+
 		$this->loader = $loader;
 		$that = $this;
-		
+
 		$this->loader->addInitializer(function ($instance) use ($that) {
-		    
+
 		    // Inject broker to services
 		    if ($instance instanceof Feature\ServiceBrokerAwareInterface) {
 		        $instance->setServiceBroker($that);
 		    }
-		    
+
 		    // Inject event manager to services
 		    if ($instance instanceof EventManagerAwareInterface) {
 		        $instance->setEventManager($that->getEventManager());
 		    }
 		});
-		
+
 		return $this;
 	}
-	
+
 	/**
 	 * Fetch service loader
-	 * 
+	 *
 	 * If servive loader is not set, initializes new
 	 * ServiceServiceLoader instance and returns it.
-	 * 
+	 *
 	 * @return \ValuSo\Broker\ServiceLoader
 	 */
 	public function getLoader()
@@ -207,69 +207,69 @@ class ServiceBroker{
 	    if (!$this->loader) {
 	        $this->loader = new ServiceLoader();
 	    }
-	    
+
 		return $this->loader;
 	}
-	
+
 	/**
 	 * Get event manager
-	 * 
+	 *
 	 * Initializes empty event manager, if event manager
 	 * instance is not previously set.
-	 * 
+	 *
 	 * @return EventManagerInterface
 	 */
 	public function getEventManager(){
-		
+
 		if(null === $this->eventManager){
 			$this->eventManager = new EventManager();
 		}
-		
+
 		return $this->eventManager;
 	}
-	
+
 	/**
 	 * Does a service exist?
-	 * 
+	 *
 	 * @param string $service
 	 * @return boolean
 	 */
 	public function exists($service){
 		return $this->getLoader()->exists($service);
 	}
-	
+
 	/**
 	 * Initialize and retrieve a new service Worker
-	 * 
+	 *
 	 * @param string $service
 	 * @throws ServiceNotFoundException
 	 * @return Worker
 	 */
 	public function service($service){
-	    
+
 	    if(!$this->exists($service)){
 	        throw new ServiceNotFoundException(sprintf('Service "%s" not found', $service));
 	    }
-	    
+
 		return new Worker($this, $service);
 	}
-	
+
 	/**
 	 * @see executeInContext()
 	 */
 	public function execute($service, $operation, $argv = array(), $callback = null)
 	{
 		return $this->executeInContext(
-	        $this->getDefaultContext(), 
-	        $service, 
-	        $operation, 
-	        $argv, 
+	        $this->getDefaultContext(),
+	        $service,
+	        $operation,
+	        $argv,
 	        $callback);
 	}
-	
+
 	/**
 	 * Execute service operation in context
-	 * 
+	 *
 	 * @param string $context
 	 * @param string $service
 	 * @param string $operation
@@ -285,10 +285,10 @@ class ServiceBroker{
             $operation,
             $argv,
 	        $context);
-	    
+
 	    return $this->dispatch($command, $callback);
 	}
-	
+
 	/**
 	 * Queue execution of service operation
 	 *
@@ -298,13 +298,13 @@ class ServiceBroker{
 	 * @return ServiceJob
 	 */
 	public function queue(CommandInterface $command, array $options = []){
-	    
+
 	    $queue = $this->getQueue();
-	    
+
 	    if (!$queue) {
 	        throw new ConfigurationException('JobQueue is not set');
 	    }
-	    
+
 	    if ($command->getIdentity()) {
 	        $identity = $command->getIdentity();
 	    } else if ($this->getDefaultIdentity()) {
@@ -312,43 +312,43 @@ class ServiceBroker{
 	    } else {
 	        $identity = null;
 	    }
-	    
+
 	    if (method_exists($identity, 'toArray')) {
 	        $identity = $identity->toArray();
 	    } else if ($identity instanceof \ArrayObject) {
 	        $identity = $identity->getArrayCopy();
 	    }
-	    
+
 	    $job = new ServiceJob();
 	    $job->setup($command, $identity);
 	    $job->setServiceBroker($this);
-	    
+
 	    $queue->push($job, $options);
 	    return $job;
 	}
-	
+
 	/**
 	 * Set job queue
-	 * 
+	 *
 	 * @param QueueInterface $queue
 	 */
 	public function setQueue(QueueInterface $queue)
 	{
 	    $this->queue = $queue;
 	}
-	
+
 	/**
 	 * Retrieve job queue
-	 * 
+	 *
 	 * @return QueueInterface
 	 */
 	public function getQueue(){
 	    return $this->queue;
 	}
-	
+
 	/**
 	 * Execute operation
-	 * 
+	 *
 	 * @param CommandInterface $command
 	 * @param mixed $callback
 	 * @throws ServiceNotFoundException
@@ -356,41 +356,46 @@ class ServiceBroker{
 	 * @return ResponseCollection|null
 	 */
 	public function dispatch(CommandInterface $command, $callback = null){
-	    
+
 	    if (!$command->getIdentity() && $this->getDefaultIdentity()) {
             $command->setIdentity($this->getDefaultIdentity());
 	    }
-	    
+
 	    $service     = $command->getService();
 	    $operation   = $command->getOperation();
 	    $context     = $command->getContext();
 	    $argv        = $command->getParams();
 	    $exception = null;
-	    
+
 	    if(!$this->exists($command->getService())){
 	        throw new ServiceNotFoundException(sprintf(
                 'Service "%s" not found', $command->getService()));
 	    }
-	    
+
 	    $responses = null;
-		
+
+        // Notify, that a (background) job is about to start
+        if ($command->getJob()) {
+            $this->trigger($this->createEvent('job.start', $command));
+        }
+
 		// Prepare and trigger init.<service>.<operation> event
 		$initEvent = strtolower('init.'.$service.'.'.$operation);
-		
+
 		if(!$this->getEventManager()->getListeners($initEvent)->isEmpty()){
 		    $e = $this->createEvent($initEvent, $command);
-		    
+
 		    $eventResponses = $this->trigger(
 	            $e,
 	            function($response){if($response === false) return true;}
 		    );
-		    
+
 		    if($eventResponses->stopped() && $eventResponses->last() === false){
 		        $responses = new ResponseCollection();
 		        $responses->setStopped(true);
 		    }
 		}
-		
+
 		// Dispatch command
 		if ($responses === null) {
 		    try{
@@ -402,36 +407,46 @@ class ServiceBroker{
 		        $exception = $ex;
 		    }
 		}
-		
+
 		// Prepare and trigger final.<service>.<operation> event
 		$finalEvent = strtolower('final.'.$service.'.'.$operation);
-		
+
 		if(!$this->getEventManager()->getListeners($finalEvent)->isEmpty()){
-		    
+
 		    $e = $this->createEvent($finalEvent, $command);
-		    
+
 		    // Set exception
 		    if ($exception) {
 		        $e->setException($exception);
 		    }
-		    
+
 		    $this->trigger($e);
-		    
+
 		    // Listeners have a chance to clear (or change) the exception
 		    $exception = $e->getException();
 		}
-		
+
+        // Notify that the job has ended
+        if ($command->getJob()) {
+            $jobEvent = $this->createEvent('job.end', $command);
+
+            if ($exception) {
+                $jobEvent->setException($exception);
+            }
+            $this->trigger($jobEvent);
+        }
+
 		// Throw exception if it still exists
 		if ($exception instanceof \Exception) {
 		    throw $exception;
 		}
-		
+
 		return $responses;
 	}
-	
+
 	/**
 	 * Triggers an event
-	 * 
+	 *
 	 * @param ServiceEvent $event
 	 * @param mixed $callback
 	 */
@@ -439,10 +454,10 @@ class ServiceBroker{
 	{
 		return $this->getEventManager()->trigger($event, $callback);
 	}
-	
+
 	/**
 	 * Create a new service event
-	 * 
+	 *
 	 * @param string $name
 	 * @param CommandInterface $command
 	 * @return \ValuSo\Broker\ServiceEvent
@@ -453,7 +468,7 @@ class ServiceBroker{
 	    $event->setName($name);
 	    $event->setCommand($command);
 	    $event->setParams($command->getParams());
-	    
+
 	    return $event;
 	}
 }
