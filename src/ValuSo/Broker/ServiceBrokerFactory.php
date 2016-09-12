@@ -128,17 +128,7 @@ class ServiceBrokerFactory implements FactoryInterface
         
         $broker = new ServiceBroker();
         $broker->setLoader($loader);
-        
-        // Attach queue instance
-        if ($serviceLocator->has('SlmQueue\Queue\QueuePluginManager')) {
-            $queueManager = $serviceLocator->get('SlmQueue\Queue\QueuePluginManager');
-            $queue        = $queueManager->get($config['queue']['name']);
-            
-            $queue->getJobPluginManager()->setFactory(
-                'ValuSo\Queue\Job\ServiceJob', 
-                'ValuSo\Queue\Job\ServiceJobFactory');
-            $broker->setQueue($queue);
-        }
+        $this->configureQueue($serviceLocator, $config, $broker);
         
         // Attach configured event listeners
         if (!empty($config['listeners'])) {
@@ -151,5 +141,21 @@ class ServiceBrokerFactory implements FactoryInterface
         $evm->trigger('valu_so.servicebroker.init', $broker);
         
         return $broker;
+    }
+
+    private function configureQueue(ServiceLocatorInterface $serviceLocator, array $config, ServiceBroker $serviceBroker)
+    {
+        $serviceBroker->setDefaultQueueName($config['queue']['name']);
+
+        if ($serviceLocator->has('SlmQueue\Queue\QueuePluginManager')) {
+            $queuePluginManager = $serviceLocator->get('SlmQueue\Queue\QueuePluginManager');
+            $queuePluginManager->addInitializer(function($instance) {
+                $instance->getJobPluginManager()->setFactory(
+                    'ValuSo\Queue\Job\ServiceJob',
+                    'ValuSo\Queue\Job\ServiceJobFactory');
+            });
+
+            $serviceBroker->setQueuePluginManager($queuePluginManager);
+        }
     }
 }

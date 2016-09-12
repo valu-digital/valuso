@@ -7,6 +7,7 @@ use ValuSoTest\TestAsset\MockServiceBroker;
 use SlmQueueTest\Asset\SimpleQueue;
 use SlmQueue\Job\JobPluginManager;
 use ArrayObject;
+use Zend\ServiceManager\ServiceManager;
 
 class WorkerTest 
     extends PHPUnit_Framework_TestCase
@@ -29,7 +30,17 @@ class WorkerTest
     
     protected function setUp()
     {
+        $jpm = new JobPluginManager();
+        $jpm->setInvokableClass('ValuSo\Broker\Job\ServiceJob', 'ValuSo\Broker\Job\ServiceJob');
+
         $this->serviceBroker = new MockServiceBroker();
+        $this->serviceBroker->setDefaultQueueName('valu_so');
+        $queue = new SimpleQueue('TestQueue', $jpm);
+
+        $pm = new ServiceManager();
+        $pm->setService('valu_so', $queue);
+        $this->serviceBroker->setQueuePluginManager($pm);
+
         
         $this->serviceBroker->getLoader()->registerService('Test1', 'Test', function($command) {
             if ($command->getOperation() === 'count') {
@@ -138,12 +149,6 @@ class WorkerTest
     
     public function testQueue()
     {
-        $jpm = new JobPluginManager();
-        $jpm->setInvokableClass('ValuSo\Broker\Job\ServiceJob', 'ValuSo\Broker\Job\ServiceJob');
-        
-        $queue = new SimpleQueue('TestQueue', $jpm);
-        $this->serviceBroker->setQueue($queue);
-        
         $this->worker->context('test');
         $this->worker->identity(new ArrayObject(['username' => 'valu']));
         $job = $this->worker->queue('count', ['a' => 'b'], ['ttl' => 3600]);

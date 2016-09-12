@@ -1,6 +1,7 @@
 <?php
 namespace ValuSo\Broker;
 
+use Zend\Di\ServiceLocatorInterface;
 use Zend\EventManager\EventManagerAwareInterface;
 use ValuSo\Command\Command;
 use ValuSo\Command\CommandInterface;
@@ -14,7 +15,6 @@ use Zend\EventManager\EventManager;
 use ArrayObject;
 use Traversable;
 use ArrayAccess;
-use SlmQueue\Queue\QueueInterface;
 use ValuSo\Broker\Exception\ConfigurationException;
 
 /**
@@ -23,6 +23,8 @@ use ValuSo\Broker\Exception\ConfigurationException;
  *
  */
 class ServiceBroker{
+
+    const QUEUE_OPTION_NAME = 'queue_name';
 
 	/**
 	 * Service loader
@@ -53,11 +55,18 @@ class ServiceBroker{
 	private $defaultIdentity;
 
 	/**
-	 * Job queue
+	 * Job queue manager
 	 *
-	 * @var QueueInterface
+	 * @var \SlmQueue\Queue\QueuePluginManager
 	 */
-	private $queue;
+	private $queuePluginManager;
+
+    /**
+     * Default queue name
+     *
+     * @var string
+     */
+    private $defaultQueueName;
 
 	/**
 	 * Initialize and configure service broker
@@ -292,18 +301,20 @@ class ServiceBroker{
 	/**
 	 * Queue execution of service operation
 	 *
-	 * @param int $priority
-	 * @param CommandInterface   $command
+	 * @param CommandInterface $command
 	 * @param array $options
 	 * @return ServiceJob
 	 */
-	public function queue(CommandInterface $command, array $options = []){
+	public function queue(CommandInterface $command, array $options = [])
+    {
+        $queueName = null;
 
-	    $queue = $this->getQueue();
+        if (isset($options[self::QUEUE_OPTION_NAME])) {
+            $queueName = $options[self::QUEUE_OPTION_NAME];
+            unset($options[self::QUEUE_OPTION_NAME]);
+        }
 
-	    if (!$queue) {
-	        throw new ConfigurationException('JobQueue is not set');
-	    }
+	    $queue = $this->getQueue($queueName);
 
 	    if ($command->getIdentity()) {
 	        $identity = $command->getIdentity();
@@ -327,24 +338,59 @@ class ServiceBroker{
 	    return $job;
 	}
 
-	/**
-	 * Set job queue
-	 *
-	 * @param QueueInterface $queue
-	 */
-	public function setQueue(QueueInterface $queue)
-	{
-	    $this->queue = $queue;
+    /**
+     * @param string|null $name Name of the queue or null to use default queue
+     * @return object
+     * @throws ConfigurationException
+     */
+	public function getQueue($name = null)
+    {
+        if (!$name && !$this->getDefaultQueueName()) {
+            throw new ConfigurationException(
+                'Default queue name is not configured');
+        }
+
+        $name = $name ?: $this->defaultQueueName;
+
+        if (!$this->getQueuePluginManager()) {
+            throw new ConfigurationException(
+                'Queue plugin manager is not set');
+        }
+
+	    return $this->getQueuePluginManager()->get($name);
 	}
 
-	/**
-	 * Retrieve job queue
-	 *
-	 * @return QueueInterface
-	 */
-	public function getQueue(){
-	    return $this->queue;
-	}
+    /**
+     * @return \SlmQueue\Queue\QueuePluginManager
+     */
+    public function getQueuePluginManager()
+    {
+        return $this->queuePluginManager;
+    }
+
+    /**
+     * @param \SlmQueue\Queue\QueuePluginManager $queuePluginManager
+     */
+    public function setQueuePluginManager(\Zend\ServiceManager\ServiceLocatorInterface $queuePluginManager)
+    {
+        $this->queuePluginManager = $queuePluginManager;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getDefaultQueueName()
+    {
+        return $this->defaultQueueName;
+    }
+
+    /**
+     * @param mixed $defaultQueueName
+     */
+    public function setDefaultQueueName($defaultQueueName)
+    {
+        $this->defaultQueueName = $defaultQueueName;
+    }
 
 	/**
 	 * Execute operation

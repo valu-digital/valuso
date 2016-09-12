@@ -9,6 +9,7 @@ use SlmQueueTest\Asset\SimpleQueue;
 use SlmQueue\Job\JobPluginManager;
 use PHPUnit_Framework_TestCase;
 use ValuSo\Broker\ServiceLoader;
+use Zend\ServiceManager\ServiceManager;
 
 /**
  * ServiceBroker test case.
@@ -32,6 +33,11 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
     private $jobPluginManager;
 
     /**
+     * @var SimpleQueue
+     */
+    private $queue;
+
+    /**
      * Prepares the environment before running a test.
      */
     protected function setUp()
@@ -40,8 +46,14 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
         
         $this->jobPluginManager = new JobPluginManager();
         $this->jobPluginManager->setInvokableClass('ValuSo\Broker\Job\ServiceJob', 'ValuSo\Broker\Job\ServiceJob');
-        
+
+        $this->queue = $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
+        $pm = new ServiceManager();
+        $pm->setService('test', $queue);
+
         $this->serviceBroker = new ServiceBroker();
+        $this->serviceBroker->setDefaultQueueName('test');
+        $this->serviceBroker->setQueuePluginManager($pm);
     }
 
     /**
@@ -164,11 +176,27 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
     
     /**
      * @expectedException ValuSo\Broker\Exception\ConfigurationException
+     * @expectedExceptionMessage Queue plugin manager is not set
      */
-    public function testQueueWhenQueueNotAvailable()
+    public function testQueueWhenQueuePluginManagerIsNotSet()
     {
         $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
         $broker = new ServiceBroker();
+        $broker->setDefaultQueueName('test');
+        $broker->queue($command);
+    }
+
+    /**
+     * @expectedException ValuSo\Broker\Exception\ConfigurationException
+     * @expectedExceptionMessage Default queue name is not configured
+     */
+    public function testQueueWhenDefaultQueueNameIsNotConfigured()
+    {
+        $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
+        $broker = new ServiceBroker();
+        $pm = new ServiceManager();
+        $pm->setService('test', $this->queue);
+        $broker->setQueuePluginManager($pm);
         $broker->queue($command);
     }
 
@@ -176,10 +204,6 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
     {
         $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
         $command->setIdentity(new \ArrayObject(['username' => 'valu']));
-        
-        $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
-        
-        $this->serviceBroker->setQueue($queue);
         $job1 = $this->serviceBroker->queue($command);
         
         $content = $job1->getContent();
@@ -191,20 +215,41 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
             'identity'  => ['username' => 'valu']
         ], $content);
         
-        $job2 = $queue->pop();
+        $job2 = $this->queue->pop();
         
         $this->assertInstanceOf('ValuSo\Queue\Job\ServiceJob', $job1);
         $this->assertInstanceOf('ValuSo\Queue\Job\ServiceJob', $job2);
         $this->assertEquals($job1->getContent(), $job2->getContent());
+    }
+
+    public function testQueueWithAlternativeQueueName()
+    {
+        $command = new Command('Valu.Test', 'run', ['all' => false], Command::CONTEXT_HTTP);
+        $command->setIdentity(new \ArrayObject(['username' => 'valu']));
+        $altQueue = new SimpleQueue('TestQueue', $this->jobPluginManager);
+
+        $this->serviceBroker->getQueuePluginManager()->setService('alt', $altQueue);
+        $job = $this->serviceBroker->queue($command, [ServiceBroker::QUEUE_OPTION_NAME => 'alt']);
+
+        $content = $job->getContent();
+        $this->assertEquals([
+            'context'   => Command::CONTEXT_HTTP,
+            'service'   => 'Valu.Test',
+            'operation' => 'run',
+            'params'    => ['all' => false],
+            'identity'  => ['username' => 'valu']
+        ], $content);
+
+        $jobInQueue = $altQueue->pop();
+        $this->assertInstanceOf('ValuSo\Queue\Job\ServiceJob', $job);
+        $this->assertInstanceOf('ValuSo\Queue\Job\ServiceJob', $jobInQueue);
+        $this->assertEquals($job->getContent(), $jobInQueue->getContent());
     }
     
     public function testQueueUsesDefaultIdentityIfCommandDoesNotHaveIdentity()
     {
         $identity = new \ArrayObject(['id' => 'abc', 'username' => 'valu']);
         $this->serviceBroker->setDefaultIdentity($identity);
-        
-        $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
-        $this->serviceBroker->setQueue($queue);
         
         $command = new Command('Valu.Test', 'run', ['all' => true], Command::CONTEXT_CLI);
         $job = $this->serviceBroker->queue($command);
@@ -213,12 +258,11 @@ class ServiceBrokerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($identity->getArrayCopy(), $content['identity']);
     }
 
-    public function testSetGetQueue()
+    public function testSetGetQueuePluginManager()
     {
-        $queue = new SimpleQueue('TestQueue', $this->jobPluginManager);
-        
-        $this->serviceBroker->setQueue($queue);
-        $this->assertSame($queue, $this->serviceBroker->getQueue());
+        $pm = new ServiceManager();
+        $this->serviceBroker->setQueuePluginManager($pm);
+        $this->assertSame($pm, $this->serviceBroker->getQueuePluginManager());
     }
     
     public function testSetOptions()
