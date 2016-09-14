@@ -309,7 +309,7 @@ class ServiceBroker{
     {
         $queueName = null;
 
-        if (isset($options[self::QUEUE_OPTION_NAME])) {
+        if (isset($options[self::QUEUE_OPTION_NAME]) && $options[self::QUEUE_OPTION_NAME]) {
             $queueName = $options[self::QUEUE_OPTION_NAME];
             unset($options[self::QUEUE_OPTION_NAME]);
         }
