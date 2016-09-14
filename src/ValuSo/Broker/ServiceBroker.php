@@ -309,8 +309,8 @@ class ServiceBroker{
     {
         $queueName = null;
 
-        if (isset($options[self::QUEUE_OPTION_NAME]) && $options[self::QUEUE_OPTION_NAME]) {
-            $queueName = $options[self::QUEUE_OPTION_NAME];
+        if (array_key_exists(self::QUEUE_OPTION_NAME, $options)) {
+            $queueName = $options[self::QUEUE_OPTION_NAME] ?: null;
             unset($options[self::QUEUE_OPTION_NAME]);
         }
 
