@@ -124,7 +124,14 @@ class UploadListenerAggregate implements ListenerAggregateInterface
         if (sizeof($uploads)) {
             foreach ($uploads as $param => $upload) {
                 $files = $this->movePhpUploadTmpFiles($upload);
-                $this->tmpFiles[spl_object_hash($command)] = $files;
+                $tmpFiles = [];
+                
+                foreach ($files as $path) {
+                    $tmpFiles[] = $path;
+                    $tmpFiles[] = dirname($path);
+                }
+                
+                $this->tmpFiles[spl_object_hash($command)] = $tmpFiles;
                 
                 if ($this->pathToUrl) {
                     foreach ($files as &$value) {
@@ -192,13 +199,16 @@ class UploadListenerAggregate implements ListenerAggregateInterface
     {
         if (isset($this->tmpFiles[$id])) {
             foreach ($this->tmpFiles[$id] as $tmpFile) {
-                
                 if (file_exists($tmpFile)) {
-                    unlink($tmpFile);
+                    if (is_dir($tmpFile)) {
+                        rmdir($tmpFile);       
+                    } else {
+                        unlink($tmpFile);
+                    }
                 }
-                
-                unset($this->tmpFiles[$id]);
             }
+            
+            unset($this->tmpFiles[$id]);
         }
         
         return $this;
@@ -257,7 +267,7 @@ class UploadListenerAggregate implements ListenerAggregateInterface
             
             $filename   = $filenames[$key];
             $tmpDir     = $this->getTempDir();
-            $targetDir  = $tmpDir . '/' . md5(basename($tmpFile) . microtime(true));
+            $targetDir  = $tmpDir . '/valu_so_upload_' . md5(basename($tmpFile) . microtime(true));
             $file       = $targetDir . DIRECTORY_SEPARATOR . $filename;
             
             if (!file_exists($targetDir) && mkdir($targetDir)) {
