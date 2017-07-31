@@ -78,7 +78,9 @@ class ServiceJob
         $identity = null;
         
         if (isset($payloadIdentity['username'])) {
-            $identity = $this->resolveIdentity($payloadIdentity['username']);
+            $identity = $this->resolveIdentity(
+                $payloadIdentity['username'], 
+                $payloadIdentity['account']);
         } else if($payloadIdentity) {
             $identity = $this->prepareIdentity($payloadIdentity);
         }
@@ -146,13 +148,21 @@ class ServiceJob
      * Resolve identity based on username
      * 
      * @param string $username
+     * @param string $accountId
      * @return boolean
      */
-    protected function resolveIdentity($username)
+    protected function resolveIdentity($username, $accountId)
     {
         $identitySeed = $this->getServiceBroker()
             ->service('User')
             ->resolveIdentity($username);
+        
+        $accountIds = isset($identitySeed['accountIds']) ? $identitySeed['accountIds'] : [];
+    
+        if (in_array($accountId, $accountIds)) {
+            $identitySeed['account']    = $accountId;
+            $identitySeed['accountId']  = $accountId;
+        }
         
         if ($identitySeed) {
             return $this->prepareIdentity($identitySeed);
