@@ -528,7 +528,12 @@ class ServiceController extends AbstractActionController
 	protected function fetchParams()
 	{
 	    $contentType = $this->getRequest()->getHeaders()->get('Content-Type');
-	    if ($contentType && strtolower($contentType->getFieldValue()) === 'application/json') {
+	    if ($contentType) {
+            $contentTypeParts = explode(';', $contentType->getFieldValue());
+            $contentType = strtolower(trim($contentTypeParts[0]));
+        }
+
+	    if ($contentType === 'application/json') {
 	        $json = $this->getRequest()->getContent();
 	        $params = JsonDecoder::decode($json, JSON::TYPE_ARRAY);
 	    } else {
